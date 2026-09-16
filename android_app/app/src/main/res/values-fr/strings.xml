@@ -590,7 +590,7 @@
     <string name="reminder_disabled_snackbar">Rappel désactivé</string>
     <string name="reminder_default_text">C\'est l\'heure de vous peser</string>
     <string name="reminder_channel_name">Rappels</string>
-    <string name="reminder_notification_title">openScale</string>
+    <string name="reminder_notification_title">maniatticScale</string>
     <string name="settings_reminder_days_label">Jours</string>
     <string name="permission_denied">Permission de notifications refusée</string>
     

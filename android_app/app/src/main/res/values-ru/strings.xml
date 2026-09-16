@@ -417,7 +417,7 @@
     <string name="reminder_disabled_snackbar">Напоминание выключено</string>
     <string name="reminder_default_text">Самое время встать на весы</string>
     <string name="reminder_channel_name">Напоминания</string>
-    <string name="reminder_notification_title">openScale</string>
+    <string name="reminder_notification_title">maniatticScale</string>
     <string name="settings_reminder_days_label">Дни</string>
     <string name="permission_denied">Нет разрешения на отправку уведомлений</string>
     <string name="monday_short">Пн</string>

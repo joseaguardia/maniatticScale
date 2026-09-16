@@ -315,7 +315,7 @@
     <string name="reminder_default_text">Време е за претегляне</string>
     <string name="reminder_disabled_snackbar">Напомнянето е деактивирано</string>
     <string name="reminder_enabled_snackbar">Напомнянето е активирано</string>
-    <string name="reminder_notification_title">openScale</string>
+    <string name="reminder_notification_title">maniatticScale</string>
     <string name="settings_reminder_days_label">Дни</string>
     <string name="permission_denied">Разрешението за известия е отказано</string>
     <string name="settings_appearance_title">Външен вид</string>

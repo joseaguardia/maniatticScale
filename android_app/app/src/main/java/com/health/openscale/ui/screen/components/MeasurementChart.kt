@@ -93,10 +93,27 @@ internal data class ChartPoint(
 )
 
 /**
+ * What a series says, which decides how it is drawn and which Vico layer it lands in.
+ */
+internal enum class ChartSeriesRole {
+    /** Unsmoothed readings, shown as loose dots behind the smoothed line. */
+    RAW,
+
+    /** The measured curve — smoothed when an algorithm is active, plain otherwise. */
+    ACTUAL,
+
+    /** Extrapolation past the last reading. */
+    PROJECTED,
+
+    /** The straight path a goal implies, from its start point to its target. */
+    GOAL_PATH,
+}
+
+/**
  * Represents a full data series for one line in the chart, including its metadata.
  */
 internal data class ChartSeries(
-    val isProjected: Boolean,
+    val role: ChartSeriesRole,
     val type: MeasurementType,
     val points: List<ChartPoint>,
 )
@@ -278,10 +295,48 @@ fun MeasurementChart(
     // ── Chart series ──────────────────────────────────────────────────────────
     val chartSeries = remember(filteredMeasurements, lineTypesToActuallyPlot, targetMeasurementTypeId) {
         val series = filteredMeasurements.toSmoothedChartSeries(lineTypesToActuallyPlot)
-        if (targetMeasurementTypeId != null) series.filter { !it.isProjected } else series
+        if (targetMeasurementTypeId != null) series.filter { it.role != ChartSeriesRole.PROJECTED } else series
     }
     val rawChartSeries = remember(filteredMeasurements, lineTypesToActuallyPlot) {
         filteredMeasurements.toRawChartSeries(lineTypesToActuallyPlot)
+    }
+
+    // ── Goal paths ────────────────────────────────────────────────────────────
+    // Progress carries the value the goal's start date resolved to, which the goal row itself
+    // deliberately does not store, and is computed over the whole history rather than over the
+    // filtered window — a "last 7 days" chart must not move where the path starts from.
+    val goalProgressState by sharedViewModel.goalProgressFlow.collectAsStateWithLifecycle()
+
+    val goalPathChartSeries: List<ChartSeries> = remember(
+        goalProgressState, lineTypesToActuallyPlot, chartSeries, rawChartSeries, showGoalLinesSetting,
+    ) {
+        val progressState = goalProgressState
+        val progress = if (progressState is SharedViewModel.UiState.Success) {
+            progressState.data
+        } else {
+            emptyList()
+        }
+        if (!showGoalLinesSetting) {
+            emptyList()
+        } else {
+            val plottedX = (chartSeries + rawChartSeries)
+                .flatMap { series -> series.points.map { it.x } }
+                .distinct()
+                .sorted()
+            goalPathSeries(progress, lineTypesToActuallyPlot, plottedX)
+        }
+    }
+
+    val chartLayerGroups = remember(
+        chartSeries, rawChartSeries, goalPathChartSeries, isSmoothingActive, showDataPointsSetting,
+    ) {
+        buildChartLayerGroups(
+            chartSeries           = chartSeries,
+            rawChartSeries        = rawChartSeries,
+            goalPaths             = goalPathChartSeries,
+            isSmoothingActive     = isSmoothingActive,
+            showDataPointsSetting = showDataPointsSetting,
+        )
     }
 
     // ── No-data message logic ─────────────────────────────────────────────────
@@ -536,11 +591,9 @@ fun MeasurementChart(
                     VerticalAxis.rememberEnd(valueFormatter = CartesianValueFormatter.decimal())
                 else null
 
-                val modelProducer = rememberChartModelProducer(
-                    chartSeries, rawChartSeries, isSmoothingActive, showDataPointsSetting,
-                )
+                val modelProducer = rememberChartModelProducer(chartLayerGroups)
                 val layers = rememberChartLayers(
-                    chartSeries, rawChartSeries, isSmoothingActive,
+                    chartLayerGroups, isSmoothingActive,
                     showDataPointsSetting, targetMeasurementTypeId, goalValuesForScaling,
                 )
 
@@ -548,9 +601,14 @@ fun MeasurementChart(
                     allAvailableMeasurementTypes.associateBy { it.id }
                 }
                     val goalDecorations = if (showGoalLinesSetting) {
-                        goalsToActuallyPlot?.map { goal ->
-                            rememberGoalLine(goal = goal, type = typeById[goal.measurementTypeId])
-                        } ?: emptyList()
+                        goalsToActuallyPlot
+                            // A goal with a target date is drawn as the sloping path instead. A flat
+                            // line says only where to end up; the path says whether today is ahead
+                            // of or behind schedule, which is what the goal is being read for.
+                            ?.filter { it.goalTargetDate == null }
+                            ?.map { goal ->
+                                rememberGoalLine(goal = goal, type = typeById[goal.measurementTypeId])
+                            } ?: emptyList()
                     } else emptyList()
 
                 val chart = rememberCartesianChart(
@@ -643,7 +701,7 @@ internal fun List<EnrichedMeasurement>.toRawChartSeries(
     return types.mapNotNull { type ->
         val points = pointsByTypeId[type.id]?.sortedBy { it.x }
         if (!points.isNullOrEmpty())
-            ChartSeries(isProjected = false, type = type, points = points)
+            ChartSeries(role = ChartSeriesRole.RAW, type = type, points = points)
         else null
     }
 }
@@ -682,7 +740,7 @@ internal fun List<EnrichedMeasurement>.toSmoothedChartSeries(
     val realSeries = types.mapNotNull { type ->
         val points = pointsByTypeId[type.id]?.sortedBy { it.x }
         if (!points.isNullOrEmpty())
-            ChartSeries(isProjected = false, type = type, points = points)
+            ChartSeries(role = ChartSeriesRole.ACTUAL, type = type, points = points)
         else null
     }
 
@@ -703,7 +761,7 @@ internal fun List<EnrichedMeasurement>.toSmoothedChartSeries(
                         )
                     }
                     .sortedBy { it.x }
-                ChartSeries(isProjected = true, type = type, points = chartPoints)
+                ChartSeries(role = ChartSeriesRole.PROJECTED, type = type, points = chartPoints)
             } else null
         }
     } else emptyList()

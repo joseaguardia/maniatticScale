@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
@@ -62,60 +63,72 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.ceil
 import kotlin.math.floor
 
-// Helper data class for holding 4 partitioned series
-private data class Quad<T>(val first: T, val second: T, val third: T, val fourth: T)
+/** One Vico layer's worth of series: same role, same vertical axis. */
+internal data class ChartLayerGroup(
+    val role: ChartSeriesRole,
+    val onRightAxis: Boolean,
+    val series: List<ChartSeries>,
+)
 
 /**
- * Creates, remembers, and updates a [CartesianChartModelProducer].
- * Transforms [ChartSeries] data into Vico's chart model, separating raw, smoothed and projected layers.
+ * Splits the series into the layers Vico draws, in a fixed order.
+ *
+ * The model producer and the layer list must agree on that order exactly — Vico pairs a layer with
+ * its model by position — so both are built from this one function rather than from two parallel
+ * chains of ifs that could drift apart.
+ *
+ * @param chartSeries    Smoothed/plain and projected series.
+ * @param rawChartSeries Raw (unsmoothed) series, drawn as dots only while smoothing is active.
+ * @param goalPaths      The straight goal paths built by [goalPathSeries].
+ */
+internal fun buildChartLayerGroups(
+    chartSeries: List<ChartSeries>,
+    rawChartSeries: List<ChartSeries>,
+    goalPaths: List<ChartSeries>,
+    isSmoothingActive: Boolean,
+    showDataPointsSetting: Boolean,
+): List<ChartLayerGroup> {
+    val byRole = chartSeries.groupBy { it.role }
+    val ordered = listOf(
+        ChartSeriesRole.RAW to
+                if (isSmoothingActive && showDataPointsSetting) rawChartSeries else emptyList(),
+        ChartSeriesRole.ACTUAL to byRole[ChartSeriesRole.ACTUAL].orEmpty(),
+        ChartSeriesRole.PROJECTED to byRole[ChartSeriesRole.PROJECTED].orEmpty(),
+        ChartSeriesRole.GOAL_PATH to goalPaths,
+    )
+
+    return ordered.flatMap { (role, series) ->
+        val (onLeft, onRight) = series.partition { !it.type.isOnRightYAxis }
+        listOfNotNull(
+            onLeft.takeIf { it.isNotEmpty() }
+                ?.let { ChartLayerGroup(role, onRightAxis = false, series = it) },
+            onRight.takeIf { it.isNotEmpty() }
+                ?.let { ChartLayerGroup(role, onRightAxis = true, series = it) },
+        )
+    }
+}
+
+/**
+ * Creates, remembers, and updates a [CartesianChartModelProducer] holding one Vico model per
+ * entry of [layerGroups], in that order.
  */
 @Composable
 internal fun rememberChartModelProducer(
-    chartSeries: List<ChartSeries>,
-    rawChartSeries: List<ChartSeries>,
-    isSmoothingActive: Boolean,
-    showDataPointsSetting: Boolean
+    layerGroups: List<ChartLayerGroup>,
 ): CartesianChartModelProducer {
     val modelProducer = remember { CartesianChartModelProducer() }
 
-    LaunchedEffect(chartSeries, rawChartSeries, isSmoothingActive, showDataPointsSetting) {
-        // Partition once instead of 4× filter
-        val (smoothedSeries, projectedSeries) = chartSeries.partition { !it.isProjected }
-        val (smoothedSeriesStart, smoothedSeriesEnd) = smoothedSeries.partition { !it.type.isOnRightYAxis }
-        val (projectedSeriesStart, projectedSeriesEnd) = projectedSeries.partition { !it.type.isOnRightYAxis }
-
-        // Partition raw series only when smoothing active
-        val (rawSeriesStart, rawSeriesEnd) = if (isSmoothingActive) {
-            val (start, end) = rawChartSeries.filter { !it.isProjected }.partition { !it.type.isOnRightYAxis }
-            start to end
-        } else {
-            emptyList<ChartSeries>() to emptyList()
-        }
-
+    LaunchedEffect(layerGroups) {
         modelProducer.runTransaction {
-            // Layer 0: Raw points START (only when smoothing active and data points enabled)
-            if (rawSeriesStart.isNotEmpty() && showDataPointsSetting) {
-                lineModel { rawSeriesStart.forEach { series(x = it.points.map { p -> p.x }, y = it.points.map { p -> p.y }) } }
-            }
-            // Layer 1: Raw points END
-            if (rawSeriesEnd.isNotEmpty() && showDataPointsSetting) {
-                lineModel { rawSeriesEnd.forEach { series(x = it.points.map { p -> p.x }, y = it.points.map { p -> p.y }) } }
-            }
-            // Layer 2: Smoothed/plain line START
-            if (smoothedSeriesStart.isNotEmpty()) {
-                lineModel { smoothedSeriesStart.forEach { series(x = it.points.map { p -> p.x }, y = it.points.map { p -> p.y }) } }
-            }
-            // Layer 3: Smoothed/plain line END
-            if (smoothedSeriesEnd.isNotEmpty()) {
-                lineModel { smoothedSeriesEnd.forEach { series(x = it.points.map { p -> p.x }, y = it.points.map { p -> p.y }) } }
-            }
-            // Layer 4: Projected START
-            if (projectedSeriesStart.isNotEmpty()) {
-                lineModel { projectedSeriesStart.forEach { series(x = it.points.map { p -> p.x }, y = it.points.map { p -> p.y }) } }
-            }
-            // Layer 5: Projected END
-            if (projectedSeriesEnd.isNotEmpty()) {
-                lineModel { projectedSeriesEnd.forEach { series(x = it.points.map { p -> p.x }, y = it.points.map { p -> p.y }) } }
+            layerGroups.forEach { group ->
+                lineModel {
+                    group.series.forEach { chartSeries ->
+                        series(
+                            x = chartSeries.points.map { it.x },
+                            y = chartSeries.points.map { it.y },
+                        )
+                    }
+                }
             }
         }
     }
@@ -123,49 +136,22 @@ internal fun rememberChartModelProducer(
 }
 
 /**
- * Creates and remembers the Vico layers for drawing lines on the chart.
- * Handles raw point layers, smoothed line layers, and projected (dashed) layers.
+ * Creates and remembers one Vico layer per entry of [layerGroups], matching the models
+ * [rememberChartModelProducer] produced from the same list.
  *
- * @param chartSeries Smoothed/plain series data.
- * @param rawChartSeries Raw (unsmoothed) series data, shown as dots when smoothing is active.
- * @param isSmoothingActive Whether a smoothing algorithm is currently active.
- * @param showDataPointsSetting Whether to show data point dots (when smoothing is off).
+ * @param isSmoothingActive       Whether a smoothing algorithm is currently active.
+ * @param showDataPointsSetting   Whether to show data point dots (when smoothing is off).
  * @param targetMeasurementTypeId If non-null, enables statistics mode (area fill, no points).
- * @param goalValuesForScaling Goal values used to scale the Y-axis range.
+ * @param goalValuesForScaling    Goal values used to scale the Y-axis range.
  */
 @Composable
 internal fun rememberChartLayers(
-    chartSeries: List<ChartSeries>,
-    rawChartSeries: List<ChartSeries>,
+    layerGroups: List<ChartLayerGroup>,
     isSmoothingActive: Boolean,
     showDataPointsSetting: Boolean,
     targetMeasurementTypeId: Int?,
     goalValuesForScaling: List<Float> = emptyList()
 ): List<LineCartesianLayer> {
-    // Partition once instead of 6× filter
-    val (rawStart, rawEnd) = remember(rawChartSeries, isSmoothingActive) {
-        if (isSmoothingActive) {
-            val (start, end) = rawChartSeries.filter { !it.isProjected }.partition { !it.type.isOnRightYAxis }
-            start to end
-        } else {
-            emptyList<ChartSeries>() to emptyList()
-        }
-    }
-
-    val (smoothedStart, smoothedEnd, projectedStart, projectedEnd) = remember(chartSeries) {
-        val (smoothed, projected) = chartSeries.partition { !it.isProjected }
-        val (sStart, sEnd) = smoothed.partition { !it.type.isOnRightYAxis }
-        val (pStart, pEnd) = projected.partition { !it.type.isOnRightYAxis }
-        Quad(sStart, sEnd, pStart, pEnd)
-    }
-
-    val rawColorsStart       = remember(rawStart) { rawStart.map { Color(it.type.color) } }
-    val rawColorsEnd         = remember(rawEnd) { rawEnd.map { Color(it.type.color) } }
-    val smoothedColorsStart  = remember(smoothedStart) { smoothedStart.map { Color(it.type.color) } }
-    val smoothedColorsEnd    = remember(smoothedEnd) { smoothedEnd.map { Color(it.type.color) } }
-    val projectedColorsStart = remember(projectedStart) { projectedStart.map { Color(it.type.color) } }
-    val projectedColorsEnd   = remember(projectedEnd) { projectedEnd.map { Color(it.type.color) } }
-
     val goalValuesDouble = remember(goalValuesForScaling) {
         goalValuesForScaling.map { it.toDouble() }
     }
@@ -187,80 +173,92 @@ internal fun rememberChartLayers(
 
     val layers = mutableListOf<LineCartesianLayer>()
 
-    @Composable
-    fun addLayer(colors: List<Color>, axisPosition: Axis.Position.Vertical, showPoints: Boolean, isProjection: Boolean, isPointConnected: Boolean = true) {
-        layers.add(
-            rememberLineCartesianLayer(
-                lineProvider = LineCartesianLayer.LineProvider.series(
-                    colors.map { color ->
-                        createLineSpec(
-                            color = color,
-                            statisticsMode = targetMeasurementTypeId != null && !isProjection,
-                            showPoints = showPoints,
-                            isProjection = isProjection,
-                            isPointConnected = isPointConnected
-                        )
-                    }
-                ),
-                verticalAxisPosition = axisPosition,
-                rangeProvider = rangeProvider
+    layerGroups.forEach { group ->
+        // Keyed by role and axis so a layer keeps what it remembers when the groups around it
+        // appear or disappear — the list grows and shrinks with the data.
+        key(group.role, group.onRightAxis) {
+            val colors = remember(group.series) { group.series.map { Color(it.type.color) } }
+            val showPoints = when (group.role) {
+                // A raw group exists only when smoothing is on and dots are enabled.
+                ChartSeriesRole.RAW    -> true
+                ChartSeriesRole.ACTUAL -> !isSmoothingActive && showDataPointsSetting
+                else                   -> false
+            }
+
+            layers.add(
+                rememberLineCartesianLayer(
+                    lineProvider = LineCartesianLayer.LineProvider.series(
+                        colors.map { color ->
+                            createLineSpec(
+                                color          = color,
+                                role           = group.role,
+                                statisticsMode = targetMeasurementTypeId != null,
+                                showPoints     = showPoints,
+                            )
+                        }
+                    ),
+                    verticalAxisPosition = if (group.onRightAxis) {
+                        Axis.Position.Vertical.End
+                    } else {
+                        Axis.Position.Vertical.Start
+                    },
+                    rangeProvider = rangeProvider
+                )
             )
-        )
+        }
     }
-
-    // Layer 0 & 1: RAW points (only when smoothing active and data points enabled)
-    if (rawStart.isNotEmpty() && showDataPointsSetting) addLayer(rawColorsStart, Axis.Position.Vertical.Start, showPoints = true, isProjection = false, isPointConnected = false)
-    if (rawEnd.isNotEmpty() && showDataPointsSetting)   addLayer(rawColorsEnd,   Axis.Position.Vertical.End,   showPoints = true, isProjection = false, isPointConnected = false)
-
-    // Layer 2 & 3: Smoothed/plain line
-    // - Smoothing ON  → line only (no points)
-    // - Smoothing OFF → line + optional points via showDataPointsSetting
-    if (smoothedStart.isNotEmpty()) addLayer(smoothedColorsStart, Axis.Position.Vertical.Start, showPoints = !isSmoothingActive && showDataPointsSetting, isProjection = false)
-    if (smoothedEnd.isNotEmpty())   addLayer(smoothedColorsEnd,   Axis.Position.Vertical.End,   showPoints = !isSmoothingActive && showDataPointsSetting, isProjection = false)
-
-    // Layer 4 & 5: Projected (dashed)
-    if (projectedStart.isNotEmpty()) addLayer(projectedColorsStart, Axis.Position.Vertical.Start, showPoints = false, isProjection = true)
-    if (projectedEnd.isNotEmpty())   addLayer(projectedColorsEnd,   Axis.Position.Vertical.End,   showPoints = false, isProjection = true)
 
     return layers
 }
 
 /**
- * Creates a [LineCartesianLayer.Line] specification for a single chart series.
+ * Creates a [LineCartesianLayer.Line] specification for one layer group.
  *
- * @param color The line and point color.
+ * @param color          The line and point color.
+ * @param role           What the series says, which picks stroke, opacity and interpolation.
  * @param statisticsMode Adds area fill, hides points. Used when `targetMeasurementTypeId` is set.
- * @param showPoints Whether to show dots on data points.
- * @param isProjection Creates a dashed line for future projection data.
- * @param isPointConnected Whether to connect points with a bezier curve.
+ * @param showPoints     Whether to show dots on data points.
  */
 internal fun createLineSpec(
     color: Color,
+    role: ChartSeriesRole,
     statisticsMode: Boolean,
     showPoints: Boolean,
-    isProjection: Boolean = false,
-    isPointConnected: Boolean = true,
 ): LineCartesianLayer.Line {
-    val lineStroke = when {
-        !isPointConnected -> LineCartesianLayer.LineStroke.Dashed(dashLength = 0.dp)
-        isProjection      -> LineCartesianLayer.LineStroke.Dashed(thickness = 2.dp, dashLength = 4.dp, gapLength = 4.dp)
-        else              -> LineCartesianLayer.LineStroke.Continuous(thickness = 2.dp)
+    // The filled statistics look belongs to what was measured, never to what is merely expected.
+    val filled = statisticsMode &&
+            (role == ChartSeriesRole.RAW || role == ChartSeriesRole.ACTUAL)
+
+    val lineStroke = when (role) {
+        ChartSeriesRole.RAW       -> LineCartesianLayer.LineStroke.Dashed(dashLength = 0.dp)
+        ChartSeriesRole.ACTUAL    -> LineCartesianLayer.LineStroke.Continuous(thickness = 2.dp)
+        ChartSeriesRole.PROJECTED -> LineCartesianLayer.LineStroke.Dashed(thickness = 2.dp, dashLength = 4.dp, gapLength = 4.dp)
+        // Long, sparse dashes: told apart at a glance from the projection's short ones, and thin
+        // enough to stay behind the measured curve it is read against.
+        ChartSeriesRole.GOAL_PATH -> LineCartesianLayer.LineStroke.Dashed(thickness = 1.5.dp, dashLength = 10.dp, gapLength = 6.dp)
     }
 
-    val lineFill = LineCartesianLayer.LineFill.single(
-        fill = if (isPointConnected) Fill(color) else Fill(color.copy(alpha = 0.5f))
-    )
+    val lineColor = when (role) {
+        ChartSeriesRole.RAW       -> color.copy(alpha = 0.5f)
+        ChartSeriesRole.GOAL_PATH -> color.copy(alpha = 0.55f)
+        else                      -> color
+    }
 
     return LineCartesianLayer.Line(
-        fill = lineFill,
+        fill = LineCartesianLayer.LineFill.single(Fill(lineColor)),
         stroke = lineStroke,
-        areaFill = if (statisticsMode && !isProjection) LineCartesianLayer.AreaFill.single(Fill(color.copy(alpha = 0.2f))) else null,
-        pointProvider = if (showPoints && !statisticsMode && !isProjection) {
+        areaFill = if (filled) LineCartesianLayer.AreaFill.single(Fill(color.copy(alpha = 0.2f))) else null,
+        pointProvider = if (showPoints && !filled) {
             LineCartesianLayer.PointProvider.single(
                 LineCartesianLayer.Point(ShapeComponent(Fill(color.copy(alpha = 0.7f)),shape = RoundedCornerShape(50)), size = 6.dp)
             )
         } else null,
-        interpolator = LineCartesianLayer.Interpolator.cubic()
+        // A goal path is straight by definition; a curve drawn through its samples would lie.
+        interpolator = if (role == ChartSeriesRole.GOAL_PATH) {
+            LineCartesianLayer.Interpolator.Sharp
+        } else {
+            LineCartesianLayer.Interpolator.cubic()
+        }
     )
 }
 

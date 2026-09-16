@@ -32,7 +32,7 @@ android {
         versionCode = 77
         versionName = "3.1.3"
 
-        manifestPlaceholders["appName"] = "openScale"
+        manifestPlaceholders["appName"] = "maniatticScale"
         manifestPlaceholders["appIcon"] = "@mipmap/ic_launcher"
         manifestPlaceholders["appRoundIcon"] = "@mipmap/ic_launcher_round"
     }
@@ -117,7 +117,7 @@ android {
             signingConfig = signingConfigs.getByName("debug")
             applicationIdSuffix = ".beta"
             versionNameSuffix = "-beta"
-            manifestPlaceholders["appName"] = "openScale beta"
+            manifestPlaceholders["appName"] = "maniatticScale beta"
             manifestPlaceholders["appIcon"] = "@mipmap/ic_launcher_beta"
             manifestPlaceholders["appRoundIcon"] = "@mipmap/ic_launcher_beta_round"
         }
@@ -127,7 +127,7 @@ android {
             signingConfig = signingConfigs.getByName("oss")
             applicationIdSuffix = ".oss"
             versionNameSuffix = "-oss"
-            manifestPlaceholders["appName"] = "openScale"
+            manifestPlaceholders["appName"] = "maniatticScale"
             manifestPlaceholders["appIcon"] = "@mipmap/ic_launcher_beta"
             manifestPlaceholders["appRoundIcon"] = "@mipmap/ic_launcher_beta_round"
         }
