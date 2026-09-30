@@ -316,7 +316,7 @@ fun MeasurementChart(
         val period = selectedPeriod
         when {
             period != null -> toEpochDayX(period.startTimestamp) to toEpochDayX(period.endTimestamp - 1)
-            uiSelectedTimeRange != TimeRangeFilter.ALL_DAYS ->
+            uiSelectedTimeRange != TimeRangeFilter.ALL_DAYS && (startTimeMillis != null || endTimeMillis != null) ->
                 startTimeMillis?.let(toEpochDayX) to
                     (endTimeMillis?.let(toEpochDayX) ?: LocalDate.now(zone).toEpochDay().toFloat())
             else -> null to null

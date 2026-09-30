@@ -69,8 +69,12 @@ internal fun rememberResolvedTimeRangeState(
     val customEndKey = remember(context) { "${context}${CUSTOM_END_DATE_MILLIS_SUFFIX}" }
     val customEndMillis by sharedViewModel.observeSetting(customEndKey, 0L).collectAsState(initial = 0L)
 
-    return remember(activeTimeRange, customStartMillis, customEndMillis) {
-        val (start, end) = activeTimeRange.resolveBounds(customStartMillis, customEndMillis)
+    val goalStartMillis by remember { sharedViewModel.goalStartMillisFlow() }.collectAsState(initial = 0L)
+
+    return remember(activeTimeRange, customStartMillis, customEndMillis, goalStartMillis) {
+        val (start, end) = activeTimeRange.resolveBounds(
+            customStartMillis, customEndMillis, goalStartMillis = goalStartMillis,
+        )
         mutableStateOf(Triple(activeTimeRange, start, end))
     }
 }
@@ -108,6 +112,9 @@ internal fun rememberFilterTitle(
     val dateFormat = remember { DateFormat.getDateFormat(context) }
 
     return when {
+        activeFilter == TimeRangeFilter.GOAL && startTimeMillis != null ->
+            stringResource(R.string.time_range_goal_since, dateFormat.format(Date(startTimeMillis)))
+
         activeFilter != TimeRangeFilter.CUSTOM || startTimeMillis == null ->
             activeFilter.getDisplayName(context)
 

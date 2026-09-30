@@ -489,6 +489,7 @@ enum class TimeRangeFilter(@param:StringRes val displayNameResId: Int) {
     LAST_7_DAYS(R.string.time_range_last_7_days),
     LAST_30_DAYS(R.string.time_range_last_30_days),
     LAST_365_DAYS(R.string.time_range_last_365_days),
+    GOAL(R.string.time_range_goal),
     CUSTOM(R.string.time_range_custom);
 
     fun getDisplayName(context: Context): String {
@@ -510,17 +511,22 @@ enum class TimeRangeFilter(@param:StringRes val displayNameResId: Int) {
      *
      * The rolling ranges snap their start to local midnight and leave the end open, so a
      * measurement dated slightly in the future stays visible.
+     *
+     * [GOAL] runs from [goalStartMillis] (the reference date set in the general settings, as local
+     * start-of-day millis, `0L` meaning "not set") up to today; unset, it shows every day.
      */
     fun resolveBounds(
         customStartMillis: Long = 0L,
         customEndMillis: Long = 0L,
         zone: ZoneId = ZoneId.systemDefault(),
         today: LocalDate = LocalDate.now(zone),
+        goalStartMillis: Long = 0L,
     ): Pair<Long?, Long?> = when (this) {
         ALL_DAYS      -> null to null
         LAST_7_DAYS   -> today.minusDays(7).startOfDayMillis(zone) to null
         LAST_30_DAYS  -> today.minusDays(30).startOfDayMillis(zone) to null
         LAST_365_DAYS -> today.minusDays(365).startOfDayMillis(zone) to null
+        GOAL          -> goalStartMillis.takeIf { it > 0L } to null
         CUSTOM        -> {
             val start = customStartMillis.takeIf { it > 0L }
             // An unset end is a deliberate choice, not missing input: the range runs up to today

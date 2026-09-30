@@ -378,6 +378,9 @@
     <string name="time_range_last_7_days">Últimos 7 días</string>
     <string name="time_range_last_30_days">Últimos 30 días</string>
     <string name="time_range_last_365_days">Últimos 365 días</string>
+    <string name="time_range_goal">Objetivo</string>
+    <string name="time_range_goal_since">Objetivo (desde %1$s)</string>
+    <string name="time_range_goal_not_set">Configura una fecha de referencia en Ajustes › General para usar este rango.</string>
     <string name="time_range_custom">Días personalizados</string>
     <string name="time_range_custom_from_to">De %1$s a %2$s</string>
     <string name="line_chart_no_plottable_types">No hay tipos de gráfico disponibles para trazar.</string>

@@ -86,6 +86,7 @@ import com.health.openscale.core.model.MeasurementWithValues
 import com.health.openscale.core.utils.LocaleUtils
 import com.health.openscale.ui.shared.SharedViewModel
 import com.health.openscale.ui.shared.TopBarAction
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -334,6 +335,14 @@ fun provideFilterTopBarAction(
                         if (timeRange == TimeRangeFilter.CUSTOM) {
                             showDateRangePicker = true
                         } else {
+                            // Without a reference date the goal range falls back to every day; say where to set it.
+                            if (timeRange == TimeRangeFilter.GOAL) {
+                                scope.launch {
+                                    if (sharedViewModel.goalStartMillisFlow().first() == 0L) {
+                                        sharedViewModel.showSnackbar(messageResId = R.string.time_range_goal_not_set)
+                                    }
+                                }
+                            }
                             scope.launch {
                                 sharedViewModel.saveSetting(targetTimeRangeKeyName, timeRange.name)
                             }

@@ -387,10 +387,11 @@ class SharedViewModel @Inject constructor(
                     observeSetting("${context}${TIME_RANGE_SUFFIX}", TimeRangeFilter.ALL_DAYS.name),
                     observeSetting("${context}${CUSTOM_START_DATE_MILLIS_SUFFIX}", 0L),
                     observeSetting("${context}${CUSTOM_END_DATE_MILLIS_SUFFIX}", 0L),
-                ) { rangeName, customStart, customEnd ->
+                    goalStartMillisFlow(),
+                ) { rangeName, customStart, customEnd, goalStart ->
                     val range = TimeRangeFilter.entries.find { it.name == rangeName }
                         ?: TimeRangeFilter.ALL_DAYS
-                    range.resolveBounds(customStart, customEnd)
+                    range.resolveBounds(customStart, customEnd, goalStartMillis = goalStart)
                 }
             }
 
@@ -769,6 +770,18 @@ class SharedViewModel @Inject constructor(
     suspend fun setSummaryReferenceDate(date: LocalDate?) {
         saveSetting(SettingsPreferenceKeys.SUMMARY_REFERENCE_EPOCH_DAY, date?.toEpochDay() ?: -1L)
     }
+
+    /**
+     * Start of the "Goal" time filter: the summary reference date as local start-of-day millis,
+     * `0L` while unset. A function rather than a property so flows built during construction can
+     * use it regardless of declaration order.
+     */
+    fun goalStartMillisFlow(): Flow<Long> =
+        observeSetting(SettingsPreferenceKeys.SUMMARY_REFERENCE_EPOCH_DAY, -1L)
+            .map { day ->
+                if (day >= 0) LocalDate.ofEpochDay(day).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                else 0L
+            }
 
     fun changeSummaryFlow(userId: Int, timestamp: Long): Flow<MeasurementChangeSummary?> =
         summaryReferenceDate.flatMapLatest { date ->

@@ -44,6 +44,18 @@ class TimeRangeFilterTest {
     }
 
     @Test
+    fun goal_runsFromReferenceDateWithOpenEnd() {
+        val reference = dayStart(LocalDate.of(2025, 3, 1))
+        assertThat(TimeRangeFilter.GOAL.resolveBounds(zone = berlin, today = today, goalStartMillis = reference))
+            .isEqualTo(reference to null)
+    }
+
+    @Test
+    fun goal_withoutReferenceDate_isUnbounded() {
+        assertThat(resolve(TimeRangeFilter.GOAL)).isEqualTo(null to null)
+    }
+
+    @Test
     fun rollingRange_startsAtLocalMidnight() {
         val (start, _) = resolve(TimeRangeFilter.LAST_30_DAYS)
         assertThat(start).isEqualTo(dayStart(LocalDate.of(2025, 3, 21)))
