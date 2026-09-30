@@ -1,3 +1,23 @@
+<img src="docs/misc/maniFit_icon.png" alt="maniFit icon" height="96" align="left"/>
+
+# maniFit
+
+Fork personal de [openScale](https://github.com/oliexdev/openScale) adaptado a mi seguimiento de peso y medidas. Mantiene el `applicationId` original (`com.health.openscale`), así que las actualizaciones conservan los datos.
+
+<br clear="left"/>
+
+## Cambios respecto a openScale
+
+- **Nombre e icono:** la app se llama *maniFit*, con icono propio (báscula y cinta métrica), y el APK se genera como `maniFit-debug.apk`.
+- **Resumen tras guardar:** al registrar una medición nueva se abre una pantalla con los cambios de peso, grasa corporal, masa magra, cadera, cintura y pecho, en tarjetas por niveles y coloreados en verde (mejora), blanco (sin cambio) o rojo (empeora):
+  - arriba, respecto al registro anterior;
+  - abajo, respecto a una fecha de referencia configurable en *Ajustes → General → Resumen tras guardar*.
+- **Ver progresión:** junto a *Mis objetivos* hay un acceso a la misma comparación desde la fecha de referencia hasta el último valor de cada medida.
+- **Línea de objetivo en la gráfica:** trayectoria del objetivo en verde lima, fina y discontinua, recortada al rango de tiempo visible y activada por defecto.
+- **Filtro de tiempo "Objetivo":** muestra la gráfica desde la fecha de referencia hasta hoy.
+
+---
+
 &nbsp; <img src="https://github.com/oliexdev/openScale/blob/master/fastlane/metadata/android/en-GB/images/icon.png" alt="openScale logo" height="60"/> &nbsp;openScale [![CI](https://github.com/oliexdev/openScale/actions/workflows/ci_master.yml/badge.svg)](https://github.com/oliexdev/openScale/actions/workflows/ci_master.yml)
 [![Translation status](https://hosted.weblate.org/widgets/openscale/-/strings/svg-badge.svg)](https://hosted.weblate.org/engage/openscale/?utm_source=widget)
 =========
