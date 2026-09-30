@@ -39,6 +39,7 @@ import androidx.navigation.navArgument
 import com.health.openscale.ui.screen.graph.GraphScreen
 import com.health.openscale.ui.screen.insights.InsightsScreen
 import com.health.openscale.ui.screen.overview.MeasurementDetailScreen
+import com.health.openscale.ui.screen.overview.MeasurementSummaryScreen
 import com.health.openscale.ui.screen.overview.OverviewScreen
 import com.health.openscale.ui.screen.settings.AboutScreen
 import com.health.openscale.ui.screen.settings.BluetoothDetailScreen
@@ -208,6 +209,20 @@ fun AppNavHost(
                     navController = navController,
                     measurementId = measurementId,
                     userId = userId,
+                    sharedViewModel = sharedViewModel
+                )
+            }
+            composable(
+                route = "${Routes.MEASUREMENT_SUMMARY}?userId={userId}&timestamp={timestamp}",
+                arguments = listOf(
+                    navArgument("userId") { type = NavType.IntType },
+                    navArgument("timestamp") { type = NavType.LongType },
+                )
+            ) { backStackEntry ->
+                MeasurementSummaryScreen(
+                    navController = navController,
+                    userId = backStackEntry.arguments?.getInt("userId") ?: -1,
+                    timestamp = backStackEntry.arguments?.getLong("timestamp") ?: 0L,
                     sharedViewModel = sharedViewModel
                 )
             }

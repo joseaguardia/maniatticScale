@@ -43,6 +43,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Contrast
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Info
@@ -91,10 +92,14 @@ import com.health.openscale.core.data.MeasurementTypeIcon
 import com.health.openscale.core.data.SupportedLanguage
 import com.health.openscale.core.utils.LocaleUtils
 import com.health.openscale.core.utils.LogManager
+import com.health.openscale.ui.screen.dialog.DateInputDialog
 import com.health.openscale.ui.screen.dialog.TimeInputDialog
 import com.health.openscale.ui.shared.SharedViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -140,6 +145,10 @@ fun GeneralSettingsScreen(
 
     var showTimePicker by remember { mutableStateOf(false) }
     var expandedDays by remember { mutableStateOf(false) }
+
+    // Post-save summary state
+    val summaryReferenceDate by sharedViewModel.summaryReferenceDate.collectAsState(initial = null)
+    var showSummaryDatePicker by remember { mutableStateOf(false) }
 
     val dayOrder = listOf(
         java.time.DayOfWeek.MONDAY to stringResource(R.string.monday_short),
@@ -569,6 +578,67 @@ fun GeneralSettingsScreen(
                     )
                 }
             })
+
+        // --- Post-save summary ---
+        SettingsSectionTitle(text = stringResource(R.string.settings_summary_title))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Event,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_summary_reference_date_label),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = stringResource(R.string.settings_summary_reference_date_summary),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            OutlinedButton(onClick = { showSummaryDatePicker = true }) {
+                Text(
+                    summaryReferenceDate?.let { LocaleUtils.formatCompactDate(it) }
+                        ?: stringResource(R.string.settings_summary_reference_date_unset)
+                )
+            }
+        }
+        if (summaryReferenceDate != null) {
+            TextButton(
+                onClick = { scope.launch { sharedViewModel.setSummaryReferenceDate(null) } },
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Text(stringResource(R.string.settings_summary_reference_date_clear))
+            }
+        }
+
+        if (showSummaryDatePicker) {
+            // The date picker works on UTC midnight millis.
+            DateInputDialog(
+                title = stringResource(R.string.settings_summary_reference_date_label),
+                initialTimestamp = (summaryReferenceDate ?: LocalDate.now())
+                    .atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+                measurementIcon = MeasurementTypeIcon.IC_DATE,
+                iconBackgroundColor = MaterialTheme.colorScheme.primary,
+                onDismiss = { showSummaryDatePicker = false },
+                onConfirm = { pickedMillis ->
+                    val picked = Instant.ofEpochMilli(pickedMillis).atZone(ZoneOffset.UTC).toLocalDate()
+                    scope.launch { sharedViewModel.setSummaryReferenceDate(picked) }
+                }
+            )
+        }
 
         // --- Diagnostics ---
         SettingsSectionTitle(text = stringResource(R.string.diagnostics_title))

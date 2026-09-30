@@ -975,4 +975,17 @@
     <string name="progress_below_goal">%1$s below goal</string> <!-- overshot a goal downwards -->
     <string name="progress_above_goal">%1$s above goal</string> <!-- overshot a goal upwards -->
 
+    <!-- Change summary shown after saving a new measurement -->
+    <string name="title_measurement_summary">Summary</string>
+    <string name="summary_since_previous">Since previous entry</string>
+    <string name="summary_since_reference">Since %1$s</string> <!-- %1$s is the configured reference date -->
+    <string name="summary_no_previous">This is your first entry, there is nothing to compare yet.</string>
+    <string name="summary_no_values">No earlier values to compare with.</string>
+    <string name="summary_reference_not_set">Set a reference date to also see your changes since then.</string>
+    <string name="summary_configure">Set reference date</string>
+    <string name="settings_summary_title">Summary after saving</string>
+    <string name="settings_summary_reference_date_label">Reference date</string>
+    <string name="settings_summary_reference_date_summary">New entries are also compared with the measurement nearest to this date.</string>
+    <string name="settings_summary_reference_date_unset">Not set</string>
+    <string name="settings_summary_reference_date_clear">Clear reference date</string>
 </resources>

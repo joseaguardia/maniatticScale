@@ -135,6 +135,9 @@ object SettingsPreferenceKeys {
     const val INSIGHTS_SCREEN_CONTEXT = "insights_screen"
     const val SHARED_FILTER_CONTEXT = "shared_screen"
     const val LINK_ACROSS_SCREENS_PREFIX = "link_across_screens"
+
+    // Reference date of the post-save summary, as LocalDate epoch day (-1 = unset)
+    const val SUMMARY_REFERENCE_EPOCH_DAY = "summary_reference_epoch_day"
 }
 
 @Module

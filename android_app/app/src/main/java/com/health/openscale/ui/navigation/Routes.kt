@@ -40,6 +40,7 @@ object Routes {
     const val SETTINGS = "settings"
 
     const val MEASUREMENT_DETAIL = "measurementDetail" // Not a main navigation item, but a route
+    const val MEASUREMENT_SUMMARY = "measurementSummary"
 
     // Sub-pages (Settings Subgraph)
     const val GENERAL_SETTINGS = "settings/general"
@@ -64,6 +65,9 @@ object Routes {
 
     fun measurementDetail(measurementId: Int?, userId: Int?): String =
         "$MEASUREMENT_DETAIL?measurementId=${measurementId ?: -1}&userId=$userId"
+
+    fun measurementSummary(userId: Int, timestamp: Long): String =
+        "$MEASUREMENT_SUMMARY?userId=$userId&timestamp=$timestamp"
 
     fun overviewDrillDown(startMillis: Long, endMillis: Long) =
         "overview_drilldown?start=$startMillis&end=$endMillis"

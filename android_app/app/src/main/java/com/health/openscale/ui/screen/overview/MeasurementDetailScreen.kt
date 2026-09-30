@@ -70,6 +70,7 @@ import com.health.openscale.core.data.MeasurementTypeIcon
 import com.health.openscale.core.data.MeasurementValue
 import com.health.openscale.core.data.UnitType
 import com.health.openscale.core.utils.LocaleUtils
+import com.health.openscale.ui.navigation.Routes
 import com.health.openscale.ui.components.RoundMeasurementIcon
 import com.health.openscale.ui.shared.SharedViewModel
 import com.health.openscale.ui.screen.dialog.DateInputDialog
@@ -360,7 +361,17 @@ fun MeasurementDetailScreen(
                     sharedViewModel.saveMeasurement(measurementToSave, valueList)
                     pendingUserId = null
                     isPendingNavigation = true
-                    navController.popBackStack()
+                    if (currentMeasurementDbId == 0) {
+                        // New entry: replace this form with the change summary.
+                        val formRoute = navController.currentBackStackEntry?.destination?.route
+                        navController.navigate(
+                            Routes.measurementSummary(effectiveUserIdForSave, measurementTimestampState)
+                        ) {
+                            formRoute?.let { popUpTo(it) { inclusive = true } }
+                        }
+                    } else {
+                        navController.popBackStack()
+                    }
                 }
             )
         )

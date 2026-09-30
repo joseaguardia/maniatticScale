@@ -29,6 +29,8 @@ import com.health.openscale.core.model.EnrichedMeasurement
 import com.health.openscale.core.model.MeasurementInsight
 import com.health.openscale.core.model.MeasurementWithValues
 import com.health.openscale.core.model.UserEvaluationContext
+import com.health.openscale.core.service.MeasurementChangeCalculator
+import com.health.openscale.core.service.MeasurementChangeSummary
 import com.health.openscale.core.service.MeasurementEnricher
 import com.health.openscale.core.usecase.MeasurementAggregationUseCase
 import com.health.openscale.core.usecase.MeasurementCrudUseCases
@@ -46,6 +48,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -307,6 +310,21 @@ class MeasurementFacade @Inject constructor(
 
     fun getMeasurementWithValuesById(id: Int): Flow<MeasurementWithValues?> =
         query.getMeasurementWithValuesById(id)
+
+    /**
+     * Changes of the user's measurement at [timestamp] against the previous entry and against
+     * [referenceMillis]. Emits null until that measurement is stored.
+     */
+    fun observeChangeSummary(
+        userId: Int,
+        timestamp: Long,
+        referenceMillis: Long?,
+    ): Flow<MeasurementChangeSummary?> =
+        combine(query.getMeasurementsForUser(userId), query.getAllMeasurementTypes()) { measurements, types ->
+            MeasurementChangeCalculator.compute(measurements, types, timestamp, referenceMillis)
+        }
+            .distinctUntilChanged()
+            .flowOn(Dispatchers.Default)
 
     suspend fun addMeasurementType(type: MeasurementType): Result<Long> =
         typeCrud.add(type)

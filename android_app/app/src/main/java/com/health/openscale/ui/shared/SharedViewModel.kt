@@ -41,6 +41,7 @@ import com.health.openscale.core.model.AggregatedMeasurement
 import com.health.openscale.core.model.MeasurementInsight
 import com.health.openscale.core.model.MeasurementWithValues
 import com.health.openscale.core.model.UserEvaluationContext
+import com.health.openscale.core.service.MeasurementChangeSummary
 import com.health.openscale.core.usecase.MeasurementDemoUseCase
 import com.health.openscale.core.usecase.GoalProgress
 import com.health.openscale.core.usecase.SyncUseCases
@@ -75,6 +76,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration.Companion.seconds
 import java.text.DateFormat
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Date
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -753,6 +756,25 @@ class SharedViewModel @Inject constructor(
             }
         }
     }
+
+    // -------------------------------------------------------------------------
+    // Post-save change summary
+    // -------------------------------------------------------------------------
+
+    /** Reference date of the change summary as [LocalDate], or null when unset. */
+    val summaryReferenceDate: Flow<LocalDate?> =
+        observeSetting(SettingsPreferenceKeys.SUMMARY_REFERENCE_EPOCH_DAY, -1L)
+            .map { day -> if (day >= 0) LocalDate.ofEpochDay(day) else null }
+
+    suspend fun setSummaryReferenceDate(date: LocalDate?) {
+        saveSetting(SettingsPreferenceKeys.SUMMARY_REFERENCE_EPOCH_DAY, date?.toEpochDay() ?: -1L)
+    }
+
+    fun changeSummaryFlow(userId: Int, timestamp: Long): Flow<MeasurementChangeSummary?> =
+        summaryReferenceDate.flatMapLatest { date ->
+            val referenceMillis = date?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
+            measurementFacade.observeChangeSummary(userId, timestamp, referenceMillis)
+        }
 
     /**
      * Fire-and-forget delete: owns its coroutine on the internal [viewModelScope] so it completes

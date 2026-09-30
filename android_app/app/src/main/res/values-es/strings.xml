@@ -772,4 +772,17 @@
     <string name="snackbar_items_move_partial_failure">No se pudieron mover %1$d de %2$d mediciones (ya existen para ese usuario).</string>
     <string name="sync_app_unreachable_hint">El último cambio no se sincronizó. Abre openScale‑sync y ejecuta una sincronización manual.</string>
     <string name="sync_app_open_action">Abrir</string>
+    <!-- Change summary shown after saving a new measurement -->
+    <string name="title_measurement_summary">Resumen</string>
+    <string name="summary_since_previous">Desde el registro anterior</string>
+    <string name="summary_since_reference">Desde el %1$s</string>
+    <string name="summary_no_previous">Es tu primer registro, todavía no hay nada con qué comparar.</string>
+    <string name="summary_no_values">No hay valores anteriores con los que comparar.</string>
+    <string name="summary_reference_not_set">Configura una fecha de referencia para ver también tus cambios desde entonces.</string>
+    <string name="summary_configure">Configurar fecha de referencia</string>
+    <string name="settings_summary_title">Resumen tras guardar</string>
+    <string name="settings_summary_reference_date_label">Fecha de referencia</string>
+    <string name="settings_summary_reference_date_summary">Los nuevos registros se comparan también con la medición más cercana a esta fecha.</string>
+    <string name="settings_summary_reference_date_unset">Sin definir</string>
+    <string name="settings_summary_reference_date_clear">Quitar fecha de referencia</string>
 </resources>
