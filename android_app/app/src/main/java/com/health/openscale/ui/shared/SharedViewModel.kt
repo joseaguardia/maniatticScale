@@ -41,6 +41,7 @@ import com.health.openscale.core.model.AggregatedMeasurement
 import com.health.openscale.core.model.MeasurementInsight
 import com.health.openscale.core.model.MeasurementWithValues
 import com.health.openscale.core.model.UserEvaluationContext
+import com.health.openscale.core.service.ChangeComparison
 import com.health.openscale.core.service.MeasurementChangeSummary
 import com.health.openscale.core.usecase.MeasurementDemoUseCase
 import com.health.openscale.core.usecase.GoalProgress
@@ -787,6 +788,17 @@ class SharedViewModel @Inject constructor(
         summaryReferenceDate.flatMapLatest { date ->
             val referenceMillis = date?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
             measurementFacade.observeChangeSummary(userId, timestamp, referenceMillis)
+        }
+
+    /** The reference date paired with the progress since then; the progress is null while unset. */
+    fun goalProgressFlow(userId: Int): Flow<Pair<LocalDate?, ChangeComparison?>> =
+        summaryReferenceDate.flatMapLatest { date ->
+            if (date == null) {
+                flowOf(null to null)
+            } else {
+                val referenceMillis = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                measurementFacade.observeProgress(userId, referenceMillis).map { date to it }
+            }
         }
 
     /**

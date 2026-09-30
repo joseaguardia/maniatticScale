@@ -78,4 +78,24 @@ class MeasurementChangeCalculatorTest {
         assertThat(reference.baselineTimestamp).isEqualTo(4 * day)
         assertThat(reference.changes.single().delta).isWithin(1e-4f).of(-7f)
     }
+
+    @Test
+    fun progress_comparesLatestReadingPerType_againstReadingNearestToReference() {
+        val measurements = listOf(
+            Fixtures.mwv(1, 1 * day, listOf(Fixtures.valueWithType(weight, 90f), Fixtures.valueWithType(waist, 100f))),
+            Fixtures.mwv(2, 6 * day, listOf(Fixtures.valueWithType(weight, 87f), Fixtures.valueWithType(waist, 97f))),
+            Fixtures.mwv(3, 10 * day, listOf(Fixtures.valueWithType(weight, 85f))),
+        )
+
+        val progress = MeasurementChangeCalculator.computeProgress(measurements, types, 2 * day)!!
+
+        assertThat(progress.baselineTimestamp).isEqualTo(1 * day)
+        assertThat(progress.changes[0].delta).isWithin(1e-4f).of(-5f)
+        assertThat(progress.changes[1].delta).isWithin(1e-4f).of(-3f)
+    }
+
+    @Test
+    fun progress_withoutMeasurements_isNull() {
+        assertThat(MeasurementChangeCalculator.computeProgress(emptyList(), types, 2 * day)).isNull()
+    }
 }

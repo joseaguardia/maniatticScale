@@ -38,6 +38,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.health.openscale.ui.screen.graph.GraphScreen
 import com.health.openscale.ui.screen.insights.InsightsScreen
+import com.health.openscale.ui.screen.overview.GoalProgressScreen
 import com.health.openscale.ui.screen.overview.MeasurementDetailScreen
 import com.health.openscale.ui.screen.overview.MeasurementSummaryScreen
 import com.health.openscale.ui.screen.overview.OverviewScreen
@@ -223,6 +224,16 @@ fun AppNavHost(
                     navController = navController,
                     userId = backStackEntry.arguments?.getInt("userId") ?: -1,
                     timestamp = backStackEntry.arguments?.getLong("timestamp") ?: 0L,
+                    sharedViewModel = sharedViewModel
+                )
+            }
+            composable(
+                route = "${Routes.GOAL_PROGRESS}?userId={userId}",
+                arguments = listOf(navArgument("userId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                GoalProgressScreen(
+                    navController = navController,
+                    userId = backStackEntry.arguments?.getInt("userId") ?: -1,
                     sharedViewModel = sharedViewModel
                 )
             }

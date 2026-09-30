@@ -986,6 +986,8 @@
     <string name="summary_no_values">No earlier values to compare with.</string>
     <string name="summary_reference_not_set">Set a reference date to also see your changes since then.</string>
     <string name="summary_configure">Set reference date</string>
+    <string name="title_goal_progress">Progress</string>
+    <string name="action_view_progress">View progress</string>
     <string name="settings_summary_title">Summary after saving</string>
     <string name="settings_summary_reference_date_label">Reference date</string>
     <string name="settings_summary_reference_date_summary">New entries are also compared with the measurement nearest to this date.</string>

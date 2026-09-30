@@ -75,13 +75,14 @@ import kotlin.math.abs
 /** Below this, a change reads as none and is not colored. */
 private const val NO_CHANGE_THRESHOLD = 0.005f
 
-/** Which direction counts as progress for each summarized type; types not listed stay neutral. */
+/** Which direction counts as progress for each summarized type. */
 private val IMPROVEMENT_DIRECTION: Map<MeasurementType.Key<*>, Int> = mapOf(
     MeasurementType.WEIGHT to -1,
     MeasurementType.BODY_FAT to -1,
     MeasurementType.LBM to 1,
     MeasurementType.HIPS to -1,
     MeasurementType.WAIST to -1,
+    MeasurementType.CHEST to -1,
 )
 
 /**
@@ -147,16 +148,65 @@ fun MeasurementSummaryScreen(
                 emptyText = stringResource(R.string.summary_no_values),
             )
         } else {
-            SummaryCard {
-                Text(
-                    text = stringResource(R.string.summary_reference_not_set),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                TextButton(onClick = { navController.navigate(Routes.GENERAL_SETTINGS) }) {
-                    Text(stringResource(R.string.summary_configure))
-                }
-            }
+            ReferenceNotSetCard(navController)
+        }
+    }
+}
+
+/** Progress since the configured reference date: each type's latest reading against that date. */
+@Composable
+fun GoalProgressScreen(
+    navController: NavController,
+    userId: Int,
+    sharedViewModel: SharedViewModel,
+) {
+    val resources = LocalResources.current
+    val state by remember(userId) { sharedViewModel.goalProgressFlow(userId) }
+        .collectAsState(initial = null)
+
+    LaunchedEffect(Unit) {
+        sharedViewModel.setTopBarTitle(resources.getString(R.string.title_goal_progress))
+        sharedViewModel.setTopBarActions(emptyList())
+    }
+
+    val current = state
+    if (current == null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+    val (referenceDate, progress) = current
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        if (referenceDate == null) {
+            ReferenceNotSetCard(navController)
+        } else {
+            SummarySection(
+                title = stringResource(R.string.summary_since_reference, LocaleUtils.formatCompactDate(referenceDate)),
+                comparison = progress ?: ChangeComparison(baselineTimestamp = null, changes = emptyList()),
+                emptyText = stringResource(R.string.summary_no_values),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReferenceNotSetCard(navController: NavController) {
+    SummaryCard {
+        Text(
+            text = stringResource(R.string.summary_reference_not_set),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        TextButton(onClick = { navController.navigate(Routes.GENERAL_SETTINGS) }) {
+            Text(stringResource(R.string.summary_configure))
         }
     }
 }

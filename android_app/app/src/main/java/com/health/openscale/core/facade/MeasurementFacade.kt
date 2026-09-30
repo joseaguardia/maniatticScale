@@ -29,6 +29,7 @@ import com.health.openscale.core.model.EnrichedMeasurement
 import com.health.openscale.core.model.MeasurementInsight
 import com.health.openscale.core.model.MeasurementWithValues
 import com.health.openscale.core.model.UserEvaluationContext
+import com.health.openscale.core.service.ChangeComparison
 import com.health.openscale.core.service.MeasurementChangeCalculator
 import com.health.openscale.core.service.MeasurementChangeSummary
 import com.health.openscale.core.service.MeasurementEnricher
@@ -322,6 +323,14 @@ class MeasurementFacade @Inject constructor(
     ): Flow<MeasurementChangeSummary?> =
         combine(query.getMeasurementsForUser(userId), query.getAllMeasurementTypes()) { measurements, types ->
             MeasurementChangeCalculator.compute(measurements, types, timestamp, referenceMillis)
+        }
+            .distinctUntilChanged()
+            .flowOn(Dispatchers.Default)
+
+    /** Progress of each summarized type from [referenceMillis] up to its latest reading. */
+    fun observeProgress(userId: Int, referenceMillis: Long): Flow<ChangeComparison?> =
+        combine(query.getMeasurementsForUser(userId), query.getAllMeasurementTypes()) { measurements, types ->
+            MeasurementChangeCalculator.computeProgress(measurements, types, referenceMillis)
         }
             .distinctUntilChanged()
             .flowOn(Dispatchers.Default)

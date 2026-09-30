@@ -26,7 +26,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,11 +39,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
@@ -501,15 +502,17 @@ fun OverviewScreen(
 
                                         AnimatedVisibility(visible = isGoalsSectionExpanded) {
                                             Column {
-                                                LazyRow(
-                                                    modifier            = Modifier.fillMaxWidth(),
-                                                    contentPadding      = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                                                // A plain scrolling Row (few goals) so every card
+                                                // can share the tallest one's height.
+                                                Row(
+                                                    modifier              = Modifier
+                                                        .fillMaxWidth()
+                                                        .horizontalScroll(rememberScrollState())
+                                                        .height(IntrinsicSize.Min)
+                                                        .padding(horizontal = 16.dp, vertical = 4.dp),
                                                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                                                 ) {
-                                                    items(
-                                                        userGoals,
-                                                        key = { goal -> "${goal.userId}_${goal.measurementTypeId}" },
-                                                    ) { goal ->
+                                                    userGoals.forEach { goal ->
                                                         // Local copy: currentSelectedUser comes from a separate
                                                         // flow than userGoals and may still be null while the user
                                                         // is being switched — avoid the !! NPE.
@@ -520,6 +523,7 @@ fun OverviewScreen(
                                                                 UserGoalChip(
                                                                     userGoal             = goal,
                                                                     measurementType      = measurementType,
+                                                                    modifier             = Modifier.fillMaxHeight(),
                                                                     progress             = progressByTypeId[goal.measurementTypeId],
                                                                     onClick              = {
                                                                         val user = currentSelectedUser
@@ -535,6 +539,12 @@ fun OverviewScreen(
                                                                 )
                                                             }
                                                         }
+                                                    }
+                                                    currentSelectedUser?.let { user ->
+                                                        ViewProgressCard(
+                                                            onClick  = { navController.navigate(Routes.goalProgress(user.id)) },
+                                                            modifier = Modifier.fillMaxHeight(),
+                                                        )
                                                     }
                                                 }
                                                 // Only meaningful while the chips still depend on
@@ -1091,6 +1101,41 @@ fun MeasurementValueRow(
             } else {
                 Spacer(modifier = Modifier.size(iconSize))
             }
+        }
+    }
+}
+
+/** Shortcut next to the goal cards to the progress since the summary reference date. */
+@Composable
+private fun ViewProgressCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier
+            .width(126.dp)
+            .clickable(onClick = onClick),
+        shape    = MaterialTheme.shapes.medium,
+        colors   = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor   = MaterialTheme.colorScheme.onSecondaryContainer,
+        ),
+    ) {
+        Column(
+            modifier            = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Icon(
+                imageVector        = Icons.AutoMirrored.Filled.TrendingUp,
+                contentDescription = null,
+                modifier           = Modifier.size(28.dp),
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text      = stringResource(R.string.action_view_progress),
+                style     = MaterialTheme.typography.labelLarge,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

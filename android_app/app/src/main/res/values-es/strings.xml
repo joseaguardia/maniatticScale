@@ -783,6 +783,8 @@
     <string name="summary_no_values">No hay valores anteriores con los que comparar.</string>
     <string name="summary_reference_not_set">Configura una fecha de referencia para ver también tus cambios desde entonces.</string>
     <string name="summary_configure">Configurar fecha de referencia</string>
+    <string name="title_goal_progress">Progresión</string>
+    <string name="action_view_progress">Ver progresión</string>
     <string name="settings_summary_title">Resumen tras guardar</string>
     <string name="settings_summary_reference_date_label">Fecha de referencia</string>
     <string name="settings_summary_reference_date_summary">Los nuevos registros se comparan también con la medición más cercana a esta fecha.</string>

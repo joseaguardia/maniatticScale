@@ -108,6 +108,36 @@ object MeasurementChangeCalculator {
         return MeasurementChangeSummary(timestamp, sincePrevious, sinceReference)
     }
 
+    /**
+     * Progress since [referenceMillis]: per type, its latest reading against the reading nearest
+     * to the reference date. Null when there are no measurements at all.
+     */
+    fun computeProgress(
+        measurements: List<MeasurementWithValues>,
+        types: List<MeasurementType>,
+        referenceMillis: Long,
+    ): ChangeComparison? {
+        if (measurements.isEmpty()) return null
+        val summaryTypes = SUMMARY_KEYS.mapNotNull { key -> types.firstOrNull { it.key == key } }
+        val sorted = measurements.sortedBy { it.measurement.timestamp }
+        val latestTimestamp = sorted.last().measurement.timestamp
+
+        return ChangeComparison(
+            baselineTimestamp = sorted
+                .filter { it.measurement.timestamp != latestTimestamp }
+                .minByOrNull { abs(it.measurement.timestamp - referenceMillis) }
+                ?.measurement?.timestamp,
+            changes = summaryTypes.mapNotNull { type ->
+                val withType = sorted.filter { numericValueFor(it, type) != null }
+                val latest = withType.lastOrNull() ?: return@mapNotNull null
+                val baseline = withType
+                    .filter { it !== latest }
+                    .minByOrNull { abs(it.measurement.timestamp - referenceMillis) }
+                change(type, numericValueFor(latest, type)!!, baseline)
+            },
+        )
+    }
+
     private fun change(type: MeasurementType, value: Float, baseline: MeasurementWithValues?) =
         MeasurementChange(
             type = type,
