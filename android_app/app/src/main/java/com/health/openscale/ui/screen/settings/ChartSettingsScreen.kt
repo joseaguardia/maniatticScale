@@ -101,7 +101,7 @@ fun ChartSettingsScreen(
 
     val showGoalLines by sharedViewModel
         .showChartGoalLines
-        .collectAsStateWithLifecycle(initialValue = false)
+        .collectAsStateWithLifecycle(initialValue = true)
 
     val projectionEnabled by sharedViewModel
         .chartProjectionEnabled

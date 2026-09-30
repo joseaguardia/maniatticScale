@@ -35,6 +35,7 @@ import com.health.openscale.core.data.MeasurementType
 import com.health.openscale.core.data.UnitType
 import com.health.openscale.core.data.UserGoals
 import com.health.openscale.core.utils.LocaleUtils
+import com.health.openscale.ui.theme.goalPathLime
 import com.patrykandpatrick.vico.compose.cartesian.axis.Axis
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
@@ -233,14 +234,13 @@ internal fun createLineSpec(
         ChartSeriesRole.RAW       -> LineCartesianLayer.LineStroke.Dashed(dashLength = 0.dp)
         ChartSeriesRole.ACTUAL    -> LineCartesianLayer.LineStroke.Continuous(thickness = 2.dp)
         ChartSeriesRole.PROJECTED -> LineCartesianLayer.LineStroke.Dashed(thickness = 2.dp, dashLength = 4.dp, gapLength = 4.dp)
-        // Long, sparse dashes: told apart at a glance from the projection's short ones, and thin
-        // enough to stay behind the measured curve it is read against.
-        ChartSeriesRole.GOAL_PATH -> LineCartesianLayer.LineStroke.Dashed(thickness = 1.5.dp, dashLength = 10.dp, gapLength = 6.dp)
+        // Long dashes: told apart at a glance from the projection's short ones.
+        ChartSeriesRole.GOAL_PATH -> LineCartesianLayer.LineStroke.Dashed(thickness = 1.dp, dashLength = 8.dp, gapLength = 6.dp)
     }
 
     val lineColor = when (role) {
         ChartSeriesRole.RAW       -> color.copy(alpha = 0.5f)
-        ChartSeriesRole.GOAL_PATH -> color.copy(alpha = 0.55f)
+        ChartSeriesRole.GOAL_PATH -> goalPathLime
         else                      -> color
     }
 

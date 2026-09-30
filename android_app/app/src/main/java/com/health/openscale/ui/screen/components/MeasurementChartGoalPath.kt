@@ -38,12 +38,19 @@ import java.time.LocalDate
  *
  * @param progress Goal progress for the user, at most one entry per measurement type.
  * @param types    The types currently plotted; goals on any other type are ignored.
- * @param plottedX Ascending, distinct x values (epoch days) the chart already draws.
+ * With a time filter active the path is clipped to the filtered window, so the x-axis keeps showing
+ * only the chosen range instead of stretching out to the goal's target date.
+ *
+ * @param plottedX     Ascending, distinct x values (epoch days) the chart already draws.
+ * @param visibleFromX First visible x (epoch day) of the active time filter, or null if unbounded.
+ * @param visibleToX   Last visible x (epoch day) of the active time filter, or null if unbounded.
  */
 internal fun goalPathSeries(
     progress: List<GoalProgress>,
     types: List<MeasurementType>,
     plottedX: List<Float>,
+    visibleFromX: Float? = null,
+    visibleToX: Float? = null,
 ): List<ChartSeries> {
     if (progress.isEmpty() || types.isEmpty()) return emptyList()
 
@@ -59,7 +66,12 @@ internal fun goalPathSeries(
         if (targetX <= startX) return@mapNotNull null
 
         val slope = (goal.goalValue - goal.startValue) / (targetX - startX)
-        val xs = (listOf(startX, targetX) + plottedX.filter { it > startX && it < targetX })
+        val fromX = maxOf(startX, visibleFromX ?: startX)
+        val toX = minOf(targetX, visibleToX ?: targetX)
+        // The path lies entirely outside the filtered window.
+        if (toX <= fromX) return@mapNotNull null
+
+        val xs = (listOf(fromX, toX) + plottedX.filter { it > fromX && it < toX })
             .distinct()
             .sorted()
 

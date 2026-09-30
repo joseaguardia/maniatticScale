@@ -788,10 +788,10 @@ class SettingsFacadeImpl @Inject constructor(
 
     override val showChartGoalLines: Flow<Boolean> = observeSetting(
         SettingsPreferenceKeys.CHART_SHOW_GOAL_LINES.name,
-        false
+        true
     ).catch { exception ->
         LogManager.e(TAG, "Error observing showChartGoalLines", exception)
-        emit(false)
+        emit(true)
     }
 
     override suspend fun setShowChartGoalLines(show: Boolean) {

@@ -31,6 +31,9 @@ val AppBrandBlue = Color(0xFF0099CC)
 val successLight = Color(0xFF1B5E20)
 val successDark = Color(0xFF66BB6A)
 
+/** Goal path on the charts: a muted lime green that stands apart from every measurement type color. */
+val goalPathLime = Color(0xFF7CB342)
+
 // === Generated M3 Palette (Seed: #0099CC) ===
 
 // Light

@@ -42,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -63,6 +64,7 @@ import com.health.openscale.core.data.AggregationLevel
 import com.health.openscale.core.data.InputFieldType
 import com.health.openscale.core.data.MeasurementType
 import com.health.openscale.core.data.SmoothingAlgorithm
+import com.health.openscale.core.data.TimeRangeFilter
 import com.health.openscale.core.facade.SettingsPreferenceKeys
 import com.health.openscale.core.model.EnrichedMeasurement
 import com.health.openscale.ui.shared.SharedViewModel
@@ -200,7 +202,7 @@ fun MeasurementChart(
     val showDataPointsSetting by sharedViewModel.showChartDataPoints
         .collectAsStateWithLifecycle(initialValue = true)
     val showGoalLinesSetting by sharedViewModel.showChartGoalLines
-        .collectAsStateWithLifecycle(initialValue = false)
+        .collectAsStateWithLifecycle(initialValue = true)
     val isSmoothingActive by remember {
         sharedViewModel.selectedSmoothingAlgorithm.map { it != SmoothingAlgorithm.NONE }
     }.collectAsStateWithLifecycle(initialValue = false)
@@ -301,6 +303,26 @@ fun MeasurementChart(
         filteredMeasurements.toRawChartSeries(lineTypesToActuallyPlot)
     }
 
+    // ── Visible x window (epoch days) ─────────────────────────────────────────
+    // A time filter (or a selected period) limits the chart to that window; an open end means
+    // today. Null sides are unbounded, as with "all days".
+    val visibleWindow: Pair<Float?, Float?> = remember(
+        uiSelectedTimeRange, startTimeMillis, endTimeMillis, selectedPeriod,
+    ) {
+        val zone = ZoneId.systemDefault()
+        val toEpochDayX = { millis: Long ->
+            Instant.ofEpochMilli(millis).atZone(zone).toLocalDate().toEpochDay().toFloat()
+        }
+        val period = selectedPeriod
+        when {
+            period != null -> toEpochDayX(period.startTimestamp) to toEpochDayX(period.endTimestamp - 1)
+            uiSelectedTimeRange != TimeRangeFilter.ALL_DAYS ->
+                startTimeMillis?.let(toEpochDayX) to
+                    (endTimeMillis?.let(toEpochDayX) ?: LocalDate.now(zone).toEpochDay().toFloat())
+            else -> null to null
+        }
+    }
+
     // ── Goal paths ────────────────────────────────────────────────────────────
     // Progress carries the value the goal's start date resolved to, which the goal row itself
     // deliberately does not store, and is computed over the whole history rather than over the
@@ -309,6 +331,7 @@ fun MeasurementChart(
 
     val goalPathChartSeries: List<ChartSeries> = remember(
         goalProgressState, lineTypesToActuallyPlot, chartSeries, rawChartSeries, showGoalLinesSetting,
+        visibleWindow,
     ) {
         val progressState = goalProgressState
         val progress = if (progressState is SharedViewModel.UiState.Success) {
@@ -323,7 +346,7 @@ fun MeasurementChart(
                 .flatMap { series -> series.points.map { it.x } }
                 .distinct()
                 .sorted()
-            goalPathSeries(progress, lineTypesToActuallyPlot, plottedX)
+            goalPathSeries(progress, lineTypesToActuallyPlot, plottedX, visibleWindow.first, visibleWindow.second)
         }
     }
 
@@ -561,8 +584,12 @@ fun MeasurementChart(
                         contentAlignment = Alignment.Center,
                     ) { CircularProgressIndicator() }
                 } else {
-                val scrollState = rememberVicoScrollState()
-                val zoomState   = rememberVicoZoomState(zoomEnabled = true, initialZoom = Zoom.Content)
+                // Vico keeps zoom and scroll across model changes; start fresh for each time window
+                // so a new filter always opens fitted to its content.
+                val scrollState = key(visibleWindow) { rememberVicoScrollState() }
+                val zoomState   = key(visibleWindow) {
+                    rememberVicoZoomState(zoomEnabled = true, initialZoom = Zoom.Content)
+                }
 
                 val xAxis = if (targetMeasurementTypeId == null) {
                     HorizontalAxis.rememberBottom(

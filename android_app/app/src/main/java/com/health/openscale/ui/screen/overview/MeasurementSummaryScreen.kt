@@ -19,22 +19,24 @@ package com.health.openscale.ui.screen.overview
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Card
@@ -119,9 +121,12 @@ fun MeasurementSummaryScreen(
         return
     }
 
+    // Each card takes the height its content needs; the scroll only kicks in if a large font
+    // setting ever makes the content taller than the screen.
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -129,7 +134,6 @@ fun MeasurementSummaryScreen(
             title = stringResource(R.string.summary_since_previous),
             comparison = current.sincePrevious,
             emptyText = stringResource(R.string.summary_no_previous),
-            modifier = Modifier.weight(1f)
         )
 
         val sinceReference = current.sinceReference
@@ -141,10 +145,9 @@ fun MeasurementSummaryScreen(
                 ),
                 comparison = sinceReference,
                 emptyText = stringResource(R.string.summary_no_values),
-                modifier = Modifier.weight(1f)
             )
         } else {
-            SummaryCard(modifier = Modifier.weight(1f)) {
+            SummaryCard {
                 Text(
                     text = stringResource(R.string.summary_reference_not_set),
                     style = MaterialTheme.typography.bodyMedium,
@@ -205,7 +208,7 @@ private fun SummarySection(
                 )
             }
         }
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         if (comparison.baselineTimestamp == null || comparison.changes.isEmpty()) {
             Text(
@@ -214,19 +217,20 @@ private fun SummarySection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SUMMARY_LEVELS.forEachIndexed { index, keys ->
                     val levelChanges = keys.mapNotNull { key -> comparison.changes.firstOrNull { it.type.key == key } }
                     if (levelChanges.isNotEmpty()) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Tiles of one level share the tallest one's height.
+                        Row(
+                            modifier = Modifier.height(IntrinsicSize.Min),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             levelChanges.forEach { change ->
                                 ChangeTile(
                                     change = change,
                                     prominent = index == 0,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f).fillMaxHeight()
                                 )
                             }
                         }
@@ -266,7 +270,7 @@ private fun ChangeTile(
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             .semantics(mergeDescendants = true) { contentDescription = "$typeName $deltaText" }
-            .padding(vertical = if (prominent) 20.dp else 12.dp, horizontal = 8.dp),
+            .padding(vertical = if (prominent) 16.dp else 12.dp, horizontal = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         if (prominent) {
@@ -292,10 +296,10 @@ private fun ChangeTile(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 RoundMeasurementIcon(
                     icon = change.type.icon.resource,
-                    size = 32.dp,
+                    size = 28.dp,
                     backgroundTint = Color(change.type.color),
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = deltaText,
                     style = MaterialTheme.typography.titleMedium,
