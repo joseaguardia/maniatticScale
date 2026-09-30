@@ -32,7 +32,7 @@ android {
         versionCode = 77
         versionName = "3.1.3"
 
-        manifestPlaceholders["appName"] = "maniatticScale"
+        manifestPlaceholders["appName"] = "maniFit"
         manifestPlaceholders["appIcon"] = "@mipmap/ic_launcher"
         manifestPlaceholders["appRoundIcon"] = "@mipmap/ic_launcher_round"
     }
@@ -117,7 +117,7 @@ android {
             signingConfig = signingConfigs.getByName("debug")
             applicationIdSuffix = ".beta"
             versionNameSuffix = "-beta"
-            manifestPlaceholders["appName"] = "maniatticScale beta"
+            manifestPlaceholders["appName"] = "maniFit beta"
             manifestPlaceholders["appIcon"] = "@mipmap/ic_launcher_beta"
             manifestPlaceholders["appRoundIcon"] = "@mipmap/ic_launcher_beta_round"
         }
@@ -127,7 +127,7 @@ android {
             signingConfig = signingConfigs.getByName("oss")
             applicationIdSuffix = ".oss"
             versionNameSuffix = "-oss"
-            manifestPlaceholders["appName"] = "maniatticScale"
+            manifestPlaceholders["appName"] = "maniFit"
             manifestPlaceholders["appIcon"] = "@mipmap/ic_launcher_beta"
             manifestPlaceholders["appRoundIcon"] = "@mipmap/ic_launcher_beta_round"
         }
@@ -164,9 +164,9 @@ androidComponents {
     onVariants { variant ->
         // Include the version number for every build type except debug.
         val baseName = if (variant.buildType == "debug") {
-            "openScale-${variant.buildType}"
+            "maniFit-${variant.buildType}"
         } else {
-            "openScale-${android.defaultConfig.versionName}-${variant.buildType}"
+            "maniFit-${android.defaultConfig.versionName}-${variant.buildType}"
         }
 
         // APK naming. outputFileName is the official replacement for the removed

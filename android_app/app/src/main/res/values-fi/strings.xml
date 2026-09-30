@@ -404,7 +404,7 @@
     <string name="reminder_disabled_snackbar">Muistutus pois käytöstä</string>
     <string name="reminder_default_text">Aika punnita</string>
     <string name="reminder_channel_name">Muistutukset</string>
-    <string name="reminder_notification_title">maniatticScale</string>
+    <string name="reminder_notification_title">maniFit</string>
     <string name="settings_reminder_days_label">Päivät</string>
     <string name="permission_denied">Ilmoitusten käyttöoikeus evätty</string>
     <string name="monday_short">ma</string>

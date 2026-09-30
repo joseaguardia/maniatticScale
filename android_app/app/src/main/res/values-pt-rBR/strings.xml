@@ -480,7 +480,7 @@
     <string name="reminder_disabled_snackbar">Lembrete desativado</string>
     <string name="reminder_default_text">Hora de se pesar</string>
     <string name="reminder_channel_name">Lembretes</string>
-    <string name="reminder_notification_title">maniatticScale</string>
+    <string name="reminder_notification_title">maniFit</string>
     <string name="settings_reminder_days_label">Dias</string>
     <string name="permission_denied">Permissão de notificações negada</string>
     <string name="monday_short">Seg</string>

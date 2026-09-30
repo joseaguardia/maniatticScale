@@ -555,7 +555,7 @@
   <string name="reminder_disabled_snackbar">已停用提醒</string>
   <string name="reminder_default_text">該量體重了</string>
   <string name="reminder_channel_name">提醒</string>
-  <string name="reminder_notification_title">maniatticScale</string>
+  <string name="reminder_notification_title">maniFit</string>
   <string name="settings_reminder_days_label">星期</string>
   <string name="permission_denied">通知權限遭拒</string>
   <string name="settings_appearance_title">外觀</string>

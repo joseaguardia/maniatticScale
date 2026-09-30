@@ -85,7 +85,7 @@ platform :android do
             name: "openScale #{versionName} release",
             tag_name: "v#{versionName}",
             description: (File.read("metadata/android/en-GB/changelogs/#{versionCode}.txt") rescue "No changelog provided"),
-            upload_assets: [ "android_app/app/build/outputs/apk/release/openScale-#{versionName}-release.apk" ]
+            upload_assets: [ "android_app/app/build/outputs/apk/release/maniFit-#{versionName}-release.apk" ]
         )
     end
 end

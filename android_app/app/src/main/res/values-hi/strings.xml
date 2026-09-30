@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App & General -->
-    <string name="app_name" translatable="false">maniatticScale</string>
+    <string name="app_name" translatable="false">maniFit</string>
     <string name="sync_app_unreachable_hint">पिछला बदलाव सिंक नहीं हुआ था। कृपया openScale-sync खोलें और मैन्युअल सिंक चलाएं।</string>
     <string name="sync_app_open_action">खोलें</string>
     <string name="app_logo_content_description">ऐप लोगो</string>
@@ -607,7 +607,7 @@
     <string name="reminder_disabled_snackbar">रिमाइंडर बंद किया गया</string>
     <string name="reminder_default_text">वजन मापने का समय हो गया है</string>
     <string name="reminder_channel_name">रिमाइंडर</string>
-    <string name="reminder_notification_title">maniatticScale</string>
+    <string name="reminder_notification_title">maniFit</string>
     <string name="settings_reminder_days_label">दिन</string>
     <string name="permission_denied">नोटिफिकेशन की अनुमति अस्वीकार कर दी गई</string>
     <string name="settings_appearance_title">रंग-रूप (Appearance)</string>

@@ -565,7 +565,7 @@
     <string name="reminder_disabled_snackbar">S’ha desactivat el recordatori</string>
     <string name="reminder_default_text">Hora de pesar-se</string>
     <string name="reminder_channel_name">Recordatoris</string>
-    <string name="reminder_notification_title">maniatticScale</string>
+    <string name="reminder_notification_title">maniFit</string>
     <string name="settings_reminder_days_label">Dies</string>
     <string name="permission_denied">S’ha denegat el permís de notificacions</string>
     <string name="settings_appearance_title">Aparença</string>

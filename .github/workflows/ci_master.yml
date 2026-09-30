@@ -51,7 +51,7 @@ jobs:
           prerelease: true
           title: "openScale development build"
           files: |
-            android_app/app/build/outputs/apk/debug/openScale-debug.apk
+            android_app/app/build/outputs/apk/debug/maniFit-debug.apk
 
   # Publish the "Supported scales in openScale" wiki page, generated from the handler registry by
   # ScaleCatalogTest. The page is a build artifact: hand edits in the wiki are overwritten, while

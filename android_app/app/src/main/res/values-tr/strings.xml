@@ -88,7 +88,7 @@
     <string name="reminder_enabled_snackbar">Hatırlatıcı etkinleştirildi</string>
     <string name="reminder_disabled_snackbar">Hatırlatıcı devre dışı bırakıldı</string>
     <string name="reminder_channel_name">Hatırlatıcılar</string>
-    <string name="reminder_notification_title">maniatticScale</string>
+    <string name="reminder_notification_title">maniFit</string>
     <string name="settings_reminder_days_label">Günler</string>
     <string name="permission_denied">Bildirim izni reddedildi</string>
     <string name="monday_short">Pzt</string>
