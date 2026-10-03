@@ -52,6 +52,7 @@ import com.health.openscale.ui.screen.components.AGGREGATION_LEVEL_SUFFIX
 import com.health.openscale.ui.screen.components.CUSTOM_END_DATE_MILLIS_SUFFIX
 import com.health.openscale.ui.screen.components.CUSTOM_START_DATE_MILLIS_SUFFIX
 import com.health.openscale.ui.screen.components.TIME_RANGE_SUFFIX
+import com.health.openscale.ui.screen.components.defaultTimeRangeFor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -385,13 +386,13 @@ class SharedViewModel @Inject constructor(
         filterContext(screenContextName, TIME_RANGE_SUFFIX)
             .flatMapLatest { context ->
                 combine(
-                    observeSetting("${context}${TIME_RANGE_SUFFIX}", TimeRangeFilter.ALL_DAYS.name),
+                    observeSetting("${context}${TIME_RANGE_SUFFIX}", defaultTimeRangeFor(context).name),
                     observeSetting("${context}${CUSTOM_START_DATE_MILLIS_SUFFIX}", 0L),
                     observeSetting("${context}${CUSTOM_END_DATE_MILLIS_SUFFIX}", 0L),
                     goalStartMillisFlow(),
                 ) { rangeName, customStart, customEnd, goalStart ->
                     val range = TimeRangeFilter.entries.find { it.name == rangeName }
-                        ?: TimeRangeFilter.ALL_DAYS
+                        ?: defaultTimeRangeFor(context)
                     range.resolveBounds(customStart, customEnd, goalStartMillis = goalStart)
                 }
             }

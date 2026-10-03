@@ -30,6 +30,7 @@ import com.health.openscale.R
 import com.health.openscale.core.data.AggregationLevel
 import com.health.openscale.core.data.TimeRangeFilter
 import com.health.openscale.core.facade.SettingsFacade
+import com.health.openscale.core.facade.SettingsPreferenceKeys
 import com.health.openscale.ui.shared.SharedViewModel
 import java.util.Date
 
@@ -39,6 +40,11 @@ internal const val CUSTOM_START_DATE_MILLIS_SUFFIX = "_custom_start_date_millis"
 internal const val CUSTOM_END_DATE_MILLIS_SUFFIX = "_custom_end_date_millis"
 internal const val SELECTED_TYPES_SUFFIX = "_selected_types"
 internal const val SHOW_TYPE_FILTER_ROW_SUFFIX = "_show_type_filter_row"
+
+/** Time range used while [context] has none persisted: the overview opens on the goal range. */
+internal fun defaultTimeRangeFor(context: String): TimeRangeFilter =
+    if (context == SettingsPreferenceKeys.OVERVIEW_SCREEN_CONTEXT) TimeRangeFilter.GOAL
+    else TimeRangeFilter.ALL_DAYS
 
 /**
  * Remembers and resolves the complete time filter state: the selected enum,
@@ -50,11 +56,11 @@ internal const val SHOW_TYPE_FILTER_ROW_SUFFIX = "_show_type_filter_row"
 internal fun rememberResolvedTimeRangeState(
     screenContextName: String,
     sharedViewModel: SharedViewModel,
-    defaultFilter: TimeRangeFilter = TimeRangeFilter.ALL_DAYS
 ): State<Triple<TimeRangeFilter, Long?, Long?>> {
     val context by sharedViewModel.filterContext(screenContextName, TIME_RANGE_SUFFIX)
         .collectAsState(initial = screenContextName)
     val timeRangeKey = remember(context) { "${context}${TIME_RANGE_SUFFIX}" }
+    val defaultFilter = defaultTimeRangeFor(context)
     val persistedTimeRangeName by sharedViewModel
         .observeSetting(timeRangeKey, defaultFilter.name)
         .collectAsState(initial = defaultFilter.name)

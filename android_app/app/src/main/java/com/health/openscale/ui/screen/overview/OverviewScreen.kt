@@ -121,6 +121,7 @@ import com.health.openscale.core.utils.LocaleUtils
 import com.health.openscale.ui.components.LinearGauge
 import com.health.openscale.ui.components.RoundMeasurementIcon
 import com.health.openscale.ui.navigation.Routes
+import com.health.openscale.ui.screen.components.BmiBar
 import com.health.openscale.ui.screen.components.ChartSplitterHandle
 import com.health.openscale.ui.screen.components.MeasurementChart
 import com.health.openscale.ui.screen.components.UserGoalChip
@@ -231,6 +232,10 @@ fun OverviewScreen(
     val isGoalsSectionExpanded by sharedViewModel.myGoalsExpandedOverview.collectAsState(initial = true)
     val userEvalContext        by sharedViewModel.userEvaluationContext.collectAsState()
     val currentSelectedUser   by sharedViewModel.selectedUser.collectAsState()
+    val lastMeasurement       by sharedViewModel.lastMeasurementOfSelectedUser.collectAsStateWithLifecycle()
+    val latestBmi: Float? = remember(lastMeasurement) {
+        lastMeasurement?.values?.firstOrNull { it.type.key == MeasurementType.BMI }?.value?.floatValue
+    }
 
     var currentSelectedMeasurementId  by rememberSaveable { mutableStateOf<Int?>(null) }
     var currentSelectedAggregatedTs   by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -348,6 +353,12 @@ fun OverviewScreen(
 
         selectedUserId != null && overviewState !is SharedViewModel.UiState.Loading -> {
             Column(modifier = Modifier.fillMaxSize()) {
+                if (!isDrillDown && latestBmi != null) {
+                    BmiBar(
+                        bmi      = latestBmi,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
                 when (val state = overviewState) {
                     is SharedViewModel.UiState.Success -> {
 

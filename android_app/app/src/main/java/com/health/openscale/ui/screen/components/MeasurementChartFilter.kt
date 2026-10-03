@@ -125,12 +125,13 @@ fun provideFilterTopBarAction(
     val isAggregationLinked by sharedViewModel.linkedAcrossScreens(AGGREGATION_LEVEL_SUFFIX)
         .collectAsState(initial = false)
     val targetTimeRangeKeyName = "${settingsContext}${TIME_RANGE_SUFFIX}"
+    val defaultTimeRange = defaultTimeRangeFor(settingsContext)
     val currentPersistedTimeRangeName by sharedViewModel
-        .observeSetting(targetTimeRangeKeyName, TimeRangeFilter.ALL_DAYS.name)
-        .collectAsState(initial = TimeRangeFilter.ALL_DAYS.name)
-    val activeTimeRange = remember(currentPersistedTimeRangeName) {
+        .observeSetting(targetTimeRangeKeyName, defaultTimeRange.name)
+        .collectAsState(initial = defaultTimeRange.name)
+    val activeTimeRange = remember(currentPersistedTimeRangeName, defaultTimeRange) {
         TimeRangeFilter.entries.find { it.name == currentPersistedTimeRangeName }
-            ?: TimeRangeFilter.ALL_DAYS
+            ?: defaultTimeRange
     }
 
     // --- Aggregation level state ---
