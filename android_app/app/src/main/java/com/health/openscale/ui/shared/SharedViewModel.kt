@@ -41,10 +41,12 @@ import com.health.openscale.core.model.AggregatedMeasurement
 import com.health.openscale.core.model.MeasurementInsight
 import com.health.openscale.core.model.MeasurementWithValues
 import com.health.openscale.core.model.UserEvaluationContext
+import com.health.openscale.core.model.WalkingSummaryState
 import com.health.openscale.core.service.ChangeComparison
 import com.health.openscale.core.service.MeasurementChangeSummary
 import com.health.openscale.core.usecase.MeasurementDemoUseCase
 import com.health.openscale.core.usecase.GoalProgress
+import com.health.openscale.core.usecase.HealthConnectUseCases
 import com.health.openscale.core.usecase.SyncUseCases
 import com.health.openscale.core.utils.LogManager
 import com.health.openscale.core.facade.SettingsPreferenceKeys
@@ -104,6 +106,7 @@ class SharedViewModel @Inject constructor(
     private val dataManagementFacade: DataManagementFacade,
     private val settingsFacade: SettingsFacade,
     private val sync: SyncUseCases,
+    private val healthConnect: HealthConnectUseCases,
 ) : ViewModel(), SettingsFacade by settingsFacade {
 
     // When openScale can't wake an installed-but-force-stopped sync app, nudge the user to open it.
@@ -784,6 +787,28 @@ class SharedViewModel @Inject constructor(
                 if (day >= 0) LocalDate.ofEpochDay(day).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
                 else 0L
             }
+
+    // -------------------------------------------------------------------------
+    // Walking activity (Health Connect)
+    // -------------------------------------------------------------------------
+
+    /** Permissions to request from Health Connect before [walkingSummary] can load. */
+    val healthConnectPermissions: Set<String> get() = healthConnect.readPermissions
+
+    private val _walkingSummary = MutableStateFlow<WalkingSummaryState?>(null)
+    /** `null` until the first read finishes. */
+    val walkingSummary: StateFlow<WalkingSummaryState?> = _walkingSummary.asStateFlow()
+
+    /** Re-reads the summary. A failed read keeps the last loaded summary on screen. */
+    fun refreshWalkingSummary() {
+        viewModelScope.launch {
+            val result = healthConnect.walkingSummary()
+            val previous = _walkingSummary.value
+            _walkingSummary.value =
+                if (result is WalkingSummaryState.Error && previous is WalkingSummaryState.Loaded) previous
+                else result
+        }
+    }
 
     fun changeSummaryFlow(userId: Int, timestamp: Long): Flow<MeasurementChangeSummary?> =
         summaryReferenceDate.flatMapLatest { date ->

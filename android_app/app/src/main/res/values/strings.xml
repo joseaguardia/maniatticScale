@@ -993,4 +993,13 @@
     <string name="settings_summary_reference_date_summary">New entries are also compared with the measurement nearest to this date.</string>
     <string name="settings_summary_reference_date_unset">Not set</string>
     <string name="settings_summary_reference_date_clear">Clear reference date</string>
+    <string name="walking_connect">Connect Health Connect to show your walks</string>
+    <string name="walking_error">Could not read walks from Health Connect</string>
+    <string name="summary_walking_title">Walks · last 14 days</string>
+    <string name="summary_walking_time">Total time</string>
+    <string name="summary_walking_distance">Total distance</string>
+    <string name="summary_walking_hours_minutes">%1$d h %2$d min</string>
+    <string name="summary_walking_minutes">%1$d min</string>
+    <string name="summary_walking_km">%1$s km</string>
+    <string name="health_connect_rationale">maniFit only reads your walking sessions (distance, duration and calories) from Health Connect to show your two-week totals in the summary shown after saving a measurement. The data stays on this device and is never shared or stored by maniFit.</string>
 </resources>

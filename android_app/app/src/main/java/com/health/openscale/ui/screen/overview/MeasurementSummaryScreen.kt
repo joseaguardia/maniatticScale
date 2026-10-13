@@ -36,12 +36,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -53,15 +58,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.health.connect.client.PermissionController
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.health.openscale.R
 import com.health.openscale.core.data.MeasurementType
+import com.health.openscale.core.model.WalkingSummaryState
 import com.health.openscale.core.service.ChangeComparison
 import com.health.openscale.core.service.MeasurementChange
 import com.health.openscale.core.utils.LocaleUtils
@@ -149,6 +158,114 @@ fun MeasurementSummaryScreen(
             )
         } else {
             ReferenceNotSetCard(navController)
+        }
+
+        WalkingTotalsCard(sharedViewModel)
+    }
+}
+
+/**
+ * Total walking time and distance of the last two weeks, read from Health Connect when the
+ * summary opens. Hidden while loading or when Health Connect is not available on the device.
+ */
+@Composable
+private fun WalkingTotalsCard(sharedViewModel: SharedViewModel) {
+    val state by sharedViewModel.walkingSummary.collectAsStateWithLifecycle()
+    val permissionLauncher = rememberLauncherForActivityResult(
+        PermissionController.createRequestPermissionResultContract()
+    ) { sharedViewModel.refreshWalkingSummary() }
+
+    LaunchedEffect(Unit) { sharedViewModel.refreshWalkingSummary() }
+
+    val current = state
+    if (current == null || current == WalkingSummaryState.Unavailable) return
+
+    SummaryCard {
+        Text(
+            text = stringResource(R.string.summary_walking_title),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        when (current) {
+            WalkingSummaryState.PermissionRequired ->
+                TextButton(onClick = { permissionLauncher.launch(sharedViewModel.healthConnectPermissions) }) {
+                    Text(stringResource(R.string.walking_connect))
+                }
+
+            WalkingSummaryState.Error -> Text(
+                text = stringResource(R.string.walking_error),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+
+            is WalkingSummaryState.Loaded -> {
+                val summary = current.summary
+                val hours = summary.totalDurationMinutes / 60
+                val minutes = summary.totalDurationMinutes % 60
+                val timeText =
+                    if (hours > 0) stringResource(R.string.summary_walking_hours_minutes, hours.toInt(), minutes.toInt())
+                    else stringResource(R.string.summary_walking_minutes, minutes.toInt())
+                val distanceText = stringResource(
+                    R.string.summary_walking_km,
+                    "%.1f".format(summary.totalDistanceMeters / 1000.0),
+                )
+
+                Row(
+                    modifier = Modifier.height(IntrinsicSize.Min),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    WalkingTile(
+                        icon = Icons.Default.Timer,
+                        value = timeText,
+                        label = stringResource(R.string.summary_walking_time),
+                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    )
+                    WalkingTile(
+                        icon = Icons.AutoMirrored.Filled.DirectionsWalk,
+                        value = distanceText,
+                        label = stringResource(R.string.summary_walking_distance),
+                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    )
+                }
+            }
+
+            WalkingSummaryState.Unavailable -> Unit
+        }
+    }
+}
+
+@Composable
+private fun WalkingTile(
+    icon: ImageVector,
+    value: String,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .semantics(mergeDescendants = true) { contentDescription = "$label $value" }
+            .padding(vertical = 12.dp, horizontal = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+            TileLabel(label)
         }
     }
 }

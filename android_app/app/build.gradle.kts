@@ -246,6 +246,9 @@ dependencies {
     implementation(libs.compose.reorderable)
     implementation(libs.compose.material.icons.extended)
 
+    // Health Connect (walking sessions recorded by Samsung Health)
+    implementation(libs.androidx.health.connect)
+
     // Kotlin-CSV
     implementation(libs.kotlin.csv.jvm)
 

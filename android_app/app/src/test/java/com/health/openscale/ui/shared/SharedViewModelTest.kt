@@ -32,6 +32,7 @@ import com.health.openscale.core.usecase.GoalProgress
 import com.health.openscale.core.database.AppDatabase
 import com.health.openscale.core.database.DatabaseRepository
 import com.health.openscale.core.usecase.MeasurementTypeCrudUseCases
+import com.health.openscale.core.usecase.HealthConnectUseCases
 import com.health.openscale.core.usecase.SyncUseCases
 import com.health.openscale.testutil.MainDispatcherRule
 import com.health.openscale.testutil.RoomTestSupport
@@ -87,6 +88,7 @@ class SharedViewModelTest {
         val sync = SyncUseCases(app, MeasurementTypeCrudUseCases(repo, ApplicationProvider.getApplicationContext()))
         vm = SharedViewModel(
             facades.userFacade, facades.measurementFacade, facades.dataManagementFacade, settings, sync,
+            HealthConnectUseCases(app),
         )
     }
 

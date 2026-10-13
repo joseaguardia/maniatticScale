@@ -790,4 +790,13 @@
     <string name="settings_summary_reference_date_summary">Los nuevos registros se comparan también con la medición más cercana a esta fecha.</string>
     <string name="settings_summary_reference_date_unset">Sin definir</string>
     <string name="settings_summary_reference_date_clear">Quitar fecha de referencia</string>
+    <string name="walking_connect">Conecta Health Connect para ver tus caminatas</string>
+    <string name="walking_error">No se han podido leer las caminatas de Health Connect</string>
+    <string name="summary_walking_title">Caminatas · últimos 14 días</string>
+    <string name="summary_walking_time">Tiempo total</string>
+    <string name="summary_walking_distance">Distancia total</string>
+    <string name="summary_walking_hours_minutes">%1$d h %2$d min</string>
+    <string name="summary_walking_minutes">%1$d min</string>
+    <string name="summary_walking_km">%1$s km</string>
+    <string name="health_connect_rationale">maniFit solo lee tus sesiones de caminata (distancia, duración y calorías) de Health Connect para mostrar los totales de las dos últimas semanas en el resumen que aparece al guardar una medición. Los datos no salen de este dispositivo y maniFit no los comparte ni los guarda.</string>
 </resources>
