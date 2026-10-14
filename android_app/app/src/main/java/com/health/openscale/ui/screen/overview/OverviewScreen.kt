@@ -139,6 +139,7 @@ import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 import java.text.DateFormat
 import java.text.SimpleDateFormat
+import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
@@ -513,6 +514,26 @@ fun OverviewScreen(
 
                                         AnimatedVisibility(visible = isGoalsSectionExpanded) {
                                             Column {
+                                                val estimatedGoalDate = progressByTypeId.values
+                                                    .firstOrNull { it.type.key == MeasurementType.WEIGHT }
+                                                    ?.estimatedGoalDate
+                                                if (estimatedGoalDate != null) {
+                                                    Text(
+                                                        text     = stringResource(
+                                                            R.string.goal_estimated_date,
+                                                            estimatedGoalDate.format(
+                                                                DateTimeFormatter.ofPattern("dd/MM/yyyy")
+                                                            ),
+                                                        ),
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(horizontal = 16.dp)
+                                                            .padding(bottom = 4.dp),
+                                                        style    = MaterialTheme.typography.bodyMedium,
+                                                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        textAlign = TextAlign.Center,
+                                                    )
+                                                }
                                                 // A plain scrolling Row (few goals) so every card
                                                 // can share the tallest one's height.
                                                 Row(

@@ -298,4 +298,56 @@ class UserGoalsUseCasesTest {
 
         assertThat(progress.inGoalSince).isEqualTo(start.plusDays(30))
     }
+
+    @Test
+    fun estimatesTheGoalDateFromTheRecentPace() {
+        // Losing 0.1 kg a day, weighed at 08:00: the trend stands at ~81.03 at midnight today,
+        // so the remaining 3.03 kg take 30.3 days, rounded up.
+        val progress = progressFor(
+            series(weight, 14L to 83.8f, 21L to 83.1f, 28L to 82.4f, 35L to 81.7f, 42L to 81.0f),
+            goals = listOf(goal(weight)),
+        ).single()
+
+        assertThat(progress.estimatedGoalDate).isEqualTo(today.plusDays(31))
+    }
+
+    @Test
+    fun hasNoEstimate_whenThePaceHeadsAwayFromTheGoal() {
+        val progress = progressFor(
+            series(weight, 28L to 81.0f, 35L to 81.5f, 42L to 82.0f),
+            goals = listOf(goal(weight)),
+        ).single()
+
+        assertThat(progress.estimatedGoalDate).isNull()
+    }
+
+    @Test
+    fun hasNoEstimate_withTooFewReadings() {
+        val progress = progressFor(
+            series(weight, 0L to 85.0f, 42L to 82.0f),
+            goals = listOf(goal(weight)),
+        ).single()
+
+        assertThat(progress.estimatedGoalDate).isNull()
+    }
+
+    @Test
+    fun hasNoEstimate_whenTheReadingsSpanTooFewDays() {
+        val progress = progressFor(
+            series(weight, 0L to 85.0f, 30L to 83.0f, 35L to 82.6f, 42L to 82.0f),
+            goals = listOf(goal(weight, startDate = start.plusDays(30))),
+        ).single()
+
+        assertThat(progress.estimatedGoalDate).isNull()
+    }
+
+    @Test
+    fun hasNoEstimate_onceTheGoalIsMet() {
+        val progress = progressFor(
+            series(weight, 28L to 80.0f, 35L to 79.0f, 42L to 77.5f),
+            goals = listOf(goal(weight)),
+        ).single()
+
+        assertThat(progress.estimatedGoalDate).isNull()
+    }
 }

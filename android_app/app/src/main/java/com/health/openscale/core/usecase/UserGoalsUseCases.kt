@@ -34,6 +34,7 @@ import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.max
 
 /** Derived from the sign of `goalValue` minus the value at the start — never stored. */
@@ -62,6 +63,11 @@ data class GoalProgress(
     val inGoalSince: LocalDate?,
     /** Signed remainder to the target. */
     val remainingToGoal: Float,
+    /**
+     * Day the goal would be reached at the pace of the recent readings, or null when that pace
+     * does not head towards it, the goal is already met, or there is too little data.
+     */
+    val estimatedGoalDate: LocalDate? = null,
 )
 
 @Singleton
@@ -109,6 +115,15 @@ class UserGoalsUseCases @Inject constructor(
         private const val HOLD_THRESHOLD = 0.005f
 
         private const val MIN_RELATIVE_DENOMINATOR = 1e-6f
+
+        /** The pace behind the estimate is fitted over this many recent days only. */
+        private const val ESTIMATE_WINDOW_DAYS = 56L
+        /** Fewer readings, or readings spread over fewer days, make the pace too noisy to project. */
+        private const val ESTIMATE_MIN_READINGS = 3
+        private const val ESTIMATE_MIN_SPAN_DAYS = 14.0
+        /** Further out than this the projection is meaningless. */
+        private const val ESTIMATE_MAX_DAYS = 3 * 365.0
+        private const val MILLIS_PER_DAY = 86_400_000.0
 
         /**
          * Computes how far the user has come since the start point of each of their goals.
@@ -200,7 +215,49 @@ class UserGoalsUseCases @Inject constructor(
                 daysToTarget    = daysToTarget,
                 inGoalSince     = inGoalSince,
                 remainingToGoal = goalValue - currentValue,
+                estimatedGoalDate = if (inGoalSince == null) {
+                    estimateGoalDate(series.filter { it.first >= startMillis }, goalValue, zone, today)
+                } else {
+                    null
+                },
             )
+        }
+
+        /**
+         * Projects the least-squares trend of the last [ESTIMATE_WINDOW_DAYS] of [series] forward
+         * until it meets [goalValue]. A trend line rather than the newest reading, so one heavy
+         * day does not move the date by weeks.
+         */
+        internal fun estimateGoalDate(
+            series: List<Pair<Long, Float>>,
+            goalValue: Float,
+            zone: ZoneId,
+            today: LocalDate,
+        ): LocalDate? {
+            val windowStart = today.minusDays(ESTIMATE_WINDOW_DAYS)
+                .atStartOfDay(zone).toInstant().toEpochMilli()
+            val recent = series.filter { it.first >= windowStart }
+            if (recent.size < ESTIMATE_MIN_READINGS) return null
+
+            val origin = recent.first().first
+            val xs = recent.map { (it.first - origin) / MILLIS_PER_DAY }
+            if (xs.last() < ESTIMATE_MIN_SPAN_DAYS) return null
+            val ys = recent.map { it.second.toDouble() }
+
+            val meanX = xs.average()
+            val meanY = ys.average()
+            val sxx = xs.sumOf { (it - meanX) * (it - meanX) }
+            val sxy = xs.indices.sumOf { (xs[it] - meanX) * (ys[it] - meanY) }
+            val slopePerDay = sxy / sxx
+            if (abs(slopePerDay) < MIN_RELATIVE_DENOMINATOR) return null
+
+            // Where the trend line stands today, and how many days on it crosses the goal.
+            val todayX = (today.atStartOfDay(zone).toInstant().toEpochMilli() - origin) / MILLIS_PER_DAY
+            val trendToday = meanY + slopePerDay * (todayX - meanX)
+            val days = (goalValue - trendToday) / slopePerDay
+            if (days < 0 || days > ESTIMATE_MAX_DAYS) return null
+
+            return today.plusDays(ceil(days).toLong())
         }
 
         /** Relative threshold, so 0.2 kg on 85 kg holds while 0.2 % on 24 % body fat moves. */

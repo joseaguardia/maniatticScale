@@ -785,6 +785,7 @@
     <string name="summary_configure">Configurar fecha de referencia</string>
     <string name="title_goal_progress">Progresión</string>
     <string name="action_view_progress">Ver progresión</string>
+    <string name="goal_estimated_date">Estimación al objetivo: %1$s</string>
     <string name="settings_summary_title">Resumen tras guardar</string>
     <string name="settings_summary_reference_date_label">Fecha de referencia</string>
     <string name="settings_summary_reference_date_summary">Los nuevos registros se comparan también con la medición más cercana a esta fecha.</string>
