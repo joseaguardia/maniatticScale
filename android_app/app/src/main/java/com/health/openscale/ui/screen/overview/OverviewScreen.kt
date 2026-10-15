@@ -122,7 +122,7 @@ import com.health.openscale.ui.components.LinearGauge
 import com.health.openscale.ui.components.RoundMeasurementIcon
 import com.health.openscale.ui.navigation.Routes
 import com.health.openscale.ui.screen.components.BmiBar
-import com.health.openscale.ui.screen.components.ChartSplitterHandle
+import com.health.openscale.ui.screen.components.CurrentWeightCard
 import com.health.openscale.ui.screen.components.MeasurementChart
 import com.health.openscale.ui.screen.components.UserGoalChip
 import com.health.openscale.ui.screen.components.provideFilterTopBarAction
@@ -167,18 +167,6 @@ fun OverviewScreen(
     val listState  = rememberLazyListState()
     val scope      = rememberCoroutineScope()
     var highlightedMeasurementId by rememberSaveable { mutableStateOf<Int?>(null) }
-
-    // ── Splitter ──────────────────────────────────────────────────────────────
-    val splitterWeight by remember(SettingsPreferenceKeys.OVERVIEW_SCREEN_CONTEXT, sharedViewModel) {
-        sharedViewModel.observeSplitterWeight(SettingsPreferenceKeys.OVERVIEW_SCREEN_CONTEXT, 0.3f)
-    }.collectAsState(initial = 0.3f)
-    var localSplitterWeight by remember { mutableStateOf(splitterWeight) }
-    // Last non-collapsed weight, restored when the user taps the handle to show the chart again.
-    var lastExpandedWeight by remember { mutableStateOf(splitterWeight.takeIf { it > 0f } ?: 0.3f) }
-    LaunchedEffect(splitterWeight) {
-        localSplitterWeight = splitterWeight
-        if (splitterWeight > 0f) lastExpandedWeight = splitterWeight
-    }
 
     // ── Aggregation ───────────────────────────────────────────────────────────
     val activeAggregationLevel by rememberResolvedAggregationLevel(
@@ -236,6 +224,10 @@ fun OverviewScreen(
     val lastMeasurement       by sharedViewModel.lastMeasurementOfSelectedUser.collectAsStateWithLifecycle()
     val latestBmi: Float? = remember(lastMeasurement) {
         lastMeasurement?.values?.firstOrNull { it.type.key == MeasurementType.BMI }?.value?.floatValue
+    }
+    val latestWeight: Pair<Float, UnitType>? = remember(lastMeasurement) {
+        lastMeasurement?.values?.firstOrNull { it.type.key == MeasurementType.WEIGHT }
+            ?.let { v -> v.value.floatValue?.let { it to v.type.unit } }
     }
 
     var currentSelectedMeasurementId  by rememberSaveable { mutableStateOf<Int?>(null) }
@@ -354,11 +346,19 @@ fun OverviewScreen(
 
         selectedUserId != null && overviewState !is SharedViewModel.UiState.Loading -> {
             Column(modifier = Modifier.fillMaxSize()) {
-                if (!isDrillDown && latestBmi != null) {
-                    BmiBar(
-                        bmi      = latestBmi,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
+                if (!isDrillDown && (latestWeight != null || latestBmi != null)) {
+                    Row(
+                        modifier              = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment     = Alignment.CenterVertically,
+                    ) {
+                        latestWeight?.let { (value, unit) ->
+                            CurrentWeightCard(value = value, unit = unit)
+                        }
+                        if (latestBmi != null) {
+                            BmiBar(bmi = latestBmi, modifier = Modifier.weight(1f))
+                        }
+                    }
                 }
                 when (val state = overviewState) {
                     is SharedViewModel.UiState.Success -> {
@@ -386,7 +386,7 @@ fun OverviewScreen(
 
                             // ── Chart + divider + goals (hidden in drill-down) ────────
                             if (!isDrillDown) {
-                                if (localSplitterWeight > 0f) Box(modifier = Modifier.weight(localSplitterWeight)) {
+                                Box(modifier = Modifier.weight(1f)) {
                                     MeasurementChart(
                                         sharedViewModel   = sharedViewModel,
                                         screenContextName = SettingsPreferenceKeys.OVERVIEW_SCREEN_CONTEXT,
@@ -434,40 +434,7 @@ fun OverviewScreen(
                                     )
                                 }
 
-                                // Draggable + tappable splitter handle (drag = resize, tap = collapse/show).
-                                // Top padding lives on the handle (not the chart) so the spacing is
-                                // kept even when the chart is collapsed and not rendered. The bottom
-                                // gap comes from the goals/list top padding.
-                                ChartSplitterHandle(
-                                    modifier  = Modifier.padding(top = 8.dp),
-                                    collapsed = localSplitterWeight <= 0f,
-                                    onDrag = { dy ->
-                                        localSplitterWeight =
-                                            (localSplitterWeight + dy / 2000f).coerceIn(0f, 0.8f)
-                                    },
-                                    onDragEnd = {
-                                        scope.launch {
-                                            sharedViewModel.setSplitterWeight(
-                                                SettingsPreferenceKeys.OVERVIEW_SCREEN_CONTEXT,
-                                                localSplitterWeight,
-                                            )
-                                        }
-                                    },
-                                    onToggleCollapse = {
-                                        localSplitterWeight = if (localSplitterWeight > 0f) {
-                                            lastExpandedWeight = localSplitterWeight
-                                            0f
-                                        } else {
-                                            lastExpandedWeight.takeIf { it > 0f } ?: 0.3f
-                                        }
-                                        scope.launch {
-                                            sharedViewModel.setSplitterWeight(
-                                                SettingsPreferenceKeys.OVERVIEW_SCREEN_CONTEXT,
-                                                localSplitterWeight,
-                                            )
-                                        }
-                                    },
-                                )
+                                Spacer(Modifier.height(8.dp))
 
                                 // Goals section
                                 if (userGoals.isNotEmpty()) {
@@ -529,7 +496,7 @@ fun OverviewScreen(
                                                             .fillMaxWidth()
                                                             .padding(horizontal = 16.dp)
                                                             .padding(bottom = 4.dp),
-                                                        style    = MaterialTheme.typography.bodyMedium,
+                                                        style    = MaterialTheme.typography.titleMedium,
                                                         color    = MaterialTheme.colorScheme.onSurfaceVariant,
                                                         textAlign = TextAlign.Center,
                                                     )
@@ -616,16 +583,15 @@ fun OverviewScreen(
                                                 }
                                             }
                                         }
-                                        HorizontalDivider()
                                     }
                                 }
                             } // end !isDrillDown chart+goals block
 
-                            // ── Main list ─────────────────────────────────────────────
-                            LazyColumn(
+                            // ── Main list (drill-down only) ───────────────────────────
+                            if (isDrillDown) LazyColumn(
                                 state                 = listState,
                                 modifier              = Modifier
-                                    .weight(if (isDrillDown) 1f else 1f - localSplitterWeight)
+                                    .weight(1f)
                                     .fillMaxSize()
                                     .padding(horizontal = 16.dp, vertical = 4.dp),
                                 verticalArrangement   = Arrangement.spacedBy(12.dp),
