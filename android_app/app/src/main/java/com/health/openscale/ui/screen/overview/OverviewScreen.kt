@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -122,7 +123,7 @@ import com.health.openscale.ui.components.LinearGauge
 import com.health.openscale.ui.components.RoundMeasurementIcon
 import com.health.openscale.ui.navigation.Routes
 import com.health.openscale.ui.screen.components.BmiBar
-import com.health.openscale.ui.screen.components.CurrentWeightCard
+import com.health.openscale.ui.screen.components.CurrentWeightBubble
 import com.health.openscale.ui.screen.components.MeasurementChart
 import com.health.openscale.ui.screen.components.UserGoalChip
 import com.health.openscale.ui.screen.components.provideFilterTopBarAction
@@ -225,9 +226,9 @@ fun OverviewScreen(
     val latestBmi: Float? = remember(lastMeasurement) {
         lastMeasurement?.values?.firstOrNull { it.type.key == MeasurementType.BMI }?.value?.floatValue
     }
-    val latestWeight: Pair<Float, UnitType>? = remember(lastMeasurement) {
+    val latestWeightValue = remember(lastMeasurement) {
         lastMeasurement?.values?.firstOrNull { it.type.key == MeasurementType.WEIGHT }
-            ?.let { v -> v.value.floatValue?.let { it to v.type.unit } }
+            ?.takeIf { it.value.floatValue != null }
     }
 
     var currentSelectedMeasurementId  by rememberSaveable { mutableStateOf<Int?>(null) }
@@ -346,19 +347,11 @@ fun OverviewScreen(
 
         selectedUserId != null && overviewState !is SharedViewModel.UiState.Loading -> {
             Column(modifier = Modifier.fillMaxSize()) {
-                if (!isDrillDown && (latestWeight != null || latestBmi != null)) {
-                    Row(
-                        modifier              = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment     = Alignment.CenterVertically,
-                    ) {
-                        latestWeight?.let { (value, unit) ->
-                            CurrentWeightCard(value = value, unit = unit)
-                        }
-                        if (latestBmi != null) {
-                            BmiBar(bmi = latestBmi, modifier = Modifier.weight(1f))
-                        }
-                    }
+                if (!isDrillDown && latestBmi != null) {
+                    BmiBar(
+                        bmi      = latestBmi,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
                 }
                 when (val state = overviewState) {
                     is SharedViewModel.UiState.Success -> {
@@ -386,7 +379,16 @@ fun OverviewScreen(
 
                             // ── Chart + divider + goals (hidden in drill-down) ────────
                             if (!isDrillDown) {
-                                Box(modifier = Modifier.weight(1f)) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(horizontal = 8.dp)
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(
+                                            if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) MaterialTheme.colorScheme.surfaceContainer
+                                            else MaterialTheme.colorScheme.surfaceContainerHigh
+                                        ),
+                                ) {
                                     MeasurementChart(
                                         sharedViewModel   = sharedViewModel,
                                         screenContextName = SettingsPreferenceKeys.OVERVIEW_SCREEN_CONTEXT,
@@ -432,6 +434,17 @@ fun OverviewScreen(
                                             }
                                         },
                                     )
+                                    // Kept above the x-axis labels.
+                                    latestWeightValue?.let { weight ->
+                                        CurrentWeightBubble(
+                                            value    = weight.value.floatValue!!,
+                                            unit     = weight.type.unit,
+                                            color    = Color(weight.type.color),
+                                            modifier = Modifier
+                                                .align(Alignment.BottomStart)
+                                                .padding(start = 12.dp, bottom = 36.dp),
+                                        )
+                                    }
                                 }
 
                                 Spacer(Modifier.height(8.dp))
@@ -485,21 +498,26 @@ fun OverviewScreen(
                                                     .firstOrNull { it.type.key == MeasurementType.WEIGHT }
                                                     ?.estimatedGoalDate
                                                 if (estimatedGoalDate != null) {
-                                                    Text(
-                                                        text     = stringResource(
-                                                            R.string.goal_estimated_date,
-                                                            estimatedGoalDate.format(
-                                                                DateTimeFormatter.ofPattern("dd/MM/yyyy")
-                                                            ),
-                                                        ),
+                                                    Card(
                                                         modifier = Modifier
                                                             .fillMaxWidth()
-                                                            .padding(horizontal = 16.dp)
-                                                            .padding(bottom = 4.dp),
-                                                        style    = MaterialTheme.typography.titleMedium,
-                                                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                        textAlign = TextAlign.Center,
-                                                    )
+                                                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                                                        shape    = MaterialTheme.shapes.medium,
+                                                    ) {
+                                                        Text(
+                                                            text      = stringResource(
+                                                                R.string.goal_estimated_date,
+                                                                estimatedGoalDate.format(
+                                                                    DateTimeFormatter.ofPattern("dd/MM/yyyy")
+                                                                ),
+                                                            ),
+                                                            modifier  = Modifier
+                                                                .fillMaxWidth()
+                                                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                                                            style     = MaterialTheme.typography.titleMedium,
+                                                            textAlign = TextAlign.Center,
+                                                        )
+                                                    }
                                                 }
                                                 // A plain scrolling Row (few goals) so every card
                                                 // can share the tallest one's height.

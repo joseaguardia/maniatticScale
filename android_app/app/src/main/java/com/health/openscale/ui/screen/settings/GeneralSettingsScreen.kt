@@ -64,6 +64,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -90,6 +93,7 @@ import androidx.core.content.ContextCompat
 import com.health.openscale.R
 import com.health.openscale.core.data.MeasurementTypeIcon
 import com.health.openscale.core.data.SupportedLanguage
+import com.health.openscale.core.data.ThemeMode
 import com.health.openscale.core.utils.LocaleUtils
 import com.health.openscale.core.utils.LogManager
 import com.health.openscale.ui.screen.dialog.DateInputDialog
@@ -123,6 +127,7 @@ fun GeneralSettingsScreen(
     val useDynamicColor by sharedViewModel.useDynamicColor.collectAsState(initial = false)
     val useHighContrast by sharedViewModel.useHighContrast.collectAsState(initial = false)
     val usePureBlack by sharedViewModel.usePureBlack.collectAsState(initial = false)
+    val themeMode by sharedViewModel.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
 
     val selectedLanguage: SupportedLanguage = remember(currentLanguageCode, supportedLanguagesEnumEntries) {
         val systemDefault = SupportedLanguage.getDefault().code
@@ -357,6 +362,27 @@ fun GeneralSettingsScreen(
 
         // --- Appearance ---
         SettingsSectionTitle(text = stringResource(R.string.settings_appearance_title))
+
+        val themeModeLabels = mapOf(
+            ThemeMode.SYSTEM to stringResource(R.string.settings_theme_system),
+            ThemeMode.LIGHT  to stringResource(R.string.settings_theme_light),
+            ThemeMode.DARK   to stringResource(R.string.settings_theme_dark),
+        )
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            ThemeMode.entries.forEachIndexed { index, mode ->
+                SegmentedButton(
+                    selected = themeMode == mode,
+                    onClick  = { scope.launch { sharedViewModel.setThemeMode(mode) } },
+                    shape    = SegmentedButtonDefaults.itemShape(index = index, count = ThemeMode.entries.size),
+                ) {
+                    Text(themeModeLabels.getValue(mode))
+                }
+            }
+        }
 
         SettingsGroup(
             leadingIcon = {

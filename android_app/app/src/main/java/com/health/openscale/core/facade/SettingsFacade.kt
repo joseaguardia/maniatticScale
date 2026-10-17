@@ -38,6 +38,7 @@ import com.health.openscale.core.data.BodyFatFormulaOption
 import com.health.openscale.core.data.BodyWaterFormulaOption
 import com.health.openscale.core.data.LbmFormulaOption
 import com.health.openscale.core.data.SmoothingAlgorithm
+import com.health.openscale.core.data.ThemeMode
 import com.health.openscale.core.service.ScannedDeviceInfo
 import com.health.openscale.core.utils.LogManager
 import dagger.Binds
@@ -75,6 +76,7 @@ object SettingsPreferenceKeys {
     val USE_DYNAMIC_COLOR = booleanPreferencesKey("use_dynamic_color")
     val USE_HIGH_CONTRAST = booleanPreferencesKey("use_high_contrast")
     val USE_PURE_BLACK = booleanPreferencesKey("use_pure_black")
+    val THEME_MODE = stringPreferencesKey("theme_mode")
 
     // Settings for specific UI components
     val SELECTED_TYPES_TABLE = stringSetPreferencesKey("selected_types_table") // IDs of measurement types selected for the data table
@@ -187,6 +189,9 @@ interface SettingsFacade {
 
     val usePureBlack: Flow<Boolean>
     suspend fun setUsePureBlack(enabled: Boolean)
+
+    val themeMode: Flow<ThemeMode>
+    suspend fun setThemeMode(mode: ThemeMode)
 
     val currentUserId: Flow<Int?>
     suspend fun setCurrentUserId(userId: Int?)
@@ -424,6 +429,15 @@ class SettingsFacadeImpl @Inject constructor(
 
     override suspend fun setUsePureBlack(enabled: Boolean) {
         saveSetting(SettingsPreferenceKeys.USE_PURE_BLACK.name, enabled)
+    }
+
+    override val themeMode: Flow<ThemeMode> = observeSetting(
+        SettingsPreferenceKeys.THEME_MODE.name,
+        ThemeMode.SYSTEM.name
+    ).map { name -> ThemeMode.entries.firstOrNull { it.name == name } ?: ThemeMode.SYSTEM }
+
+    override suspend fun setThemeMode(mode: ThemeMode) {
+        saveSetting(SettingsPreferenceKeys.THEME_MODE.name, mode.name)
     }
 
     override val currentUserId: Flow<Int?> = dataStore.data

@@ -57,6 +57,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.health.openscale.R
@@ -72,6 +73,8 @@ import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
+import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
@@ -591,6 +594,12 @@ fun MeasurementChart(
                     rememberVicoZoomState(zoomEnabled = true, initialZoom = Zoom.Content)
                 }
 
+                // Faint solid grid, only a shade off the chart background.
+                val gridLine = rememberAxisGuidelineComponent(
+                    fill  = Fill(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                    shape = RectangleShape,
+                )
+
                 val xAxis = if (targetMeasurementTypeId == null) {
                     HorizontalAxis.rememberBottom(
                         valueFormatter = rememberXAxisValueFormatter(chartSeries, activeAggregationLevel),
@@ -607,15 +616,17 @@ fun MeasurementChart(
                                 addExtremeLabelPadding = true,
                             )
                         },
-                        guideline = null,
+                        guideline = gridLine,
                     )
                 } else null
 
+                // Without the y-axis, a bare one still draws the horizontal grid lines.
                 val startYAxis = if (showYAxis)
-                    VerticalAxis.rememberStart(valueFormatter = CartesianValueFormatter.decimal())
-                else null
+                    VerticalAxis.rememberStart(valueFormatter = CartesianValueFormatter.decimal(), guideline = gridLine)
+                else
+                    VerticalAxis.rememberStart(line = null, label = null, tick = null, tickLength = 0.dp, guideline = gridLine)
                 val endYAxis = if (showYAxis)
-                    VerticalAxis.rememberEnd(valueFormatter = CartesianValueFormatter.decimal())
+                    VerticalAxis.rememberEnd(valueFormatter = CartesianValueFormatter.decimal(), guideline = null)
                 else null
 
                 val modelProducer = rememberChartModelProducer(chartLayerGroups)

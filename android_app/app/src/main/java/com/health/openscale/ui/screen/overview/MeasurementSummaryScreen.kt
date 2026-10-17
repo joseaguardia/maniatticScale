@@ -58,6 +58,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
@@ -427,7 +428,10 @@ private fun ChangeTile(
     val deltaColor = when {
         delta == null || abs(delta) < NO_CHANGE_THRESHOLD || direction == 0 ->
             MaterialTheme.colorScheme.onSurface
-        delta * direction > 0 -> MaterialTheme.colorScheme.success
+        // Dark green reads poorly on the light tiles; keep the green only on dark themes.
+        delta * direction > 0 ->
+            if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) MaterialTheme.colorScheme.success
+            else MaterialTheme.colorScheme.onSurface
         else -> MaterialTheme.colorScheme.error
     }
     val typeName = change.type.getDisplayName(context)

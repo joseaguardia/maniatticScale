@@ -159,6 +159,9 @@ enum class SupportedLanguage(val code: String, val nativeDisplayName: String) {
     }
 }
 
+/** Light/dark choice for the app theme; SYSTEM follows the device setting. */
+enum class ThemeMode { SYSTEM, LIGHT, DARK }
+
 enum class GenderType(@param:StringRes val displayNameResId: Int) {
     MALE(R.string.gender_male),
     FEMALE(R.string.gender_female);

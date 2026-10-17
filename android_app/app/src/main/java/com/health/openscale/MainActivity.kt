@@ -29,6 +29,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.health.openscale.core.data.ThemeMode
 import com.health.openscale.core.facade.SettingsFacade
 import com.health.openscale.core.utils.LogManager
 import com.health.openscale.ui.navigation.AppNavigation
@@ -60,7 +61,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             // The main UI of the app.
             val sharedViewModel: SharedViewModel = hiltViewModel()
-            val darkTheme = isSystemInDarkTheme()
+            val themeMode by settingsFacade.themeMode.collectAsStateWithLifecycle(initialValue = ThemeMode.SYSTEM)
+            val darkTheme = when (themeMode) {
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                ThemeMode.LIGHT  -> false
+                ThemeMode.DARK   -> true
+            }
             val useDynamicColor by settingsFacade.useDynamicColor.collectAsStateWithLifecycle(initialValue = false)
             val useHighContrast by settingsFacade.useHighContrast.collectAsStateWithLifecycle(initialValue = false)
             val usePureBlack by settingsFacade.usePureBlack.collectAsStateWithLifecycle(initialValue = false)

@@ -28,6 +28,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import com.patrykandpatrick.vico.compose.common.ProvideVicoTheme
+import com.patrykandpatrick.vico.compose.m3.common.rememberM3VicoTheme
 
 private val lightScheme = lightColorScheme(
     primary = primaryLight,
@@ -313,6 +315,15 @@ fun OpenScaleTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography  = AppTypography,
-        content     = content,
-    )
+    ) {
+        // Vico otherwise picks its axis colours from the system theme, which breaks when the
+        // app's own light/dark choice differs from it.
+        ProvideVicoTheme(
+            rememberM3VicoTheme(
+                lineColor = colorScheme.outlineVariant,
+                textColor = colorScheme.onSurfaceVariant,
+            ),
+            content,
+        )
+    }
 }

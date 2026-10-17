@@ -25,8 +25,12 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.health.openscale.R
@@ -36,11 +40,13 @@ import com.health.openscale.core.data.UnitType
 import com.health.openscale.core.data.UserGoals
 import com.health.openscale.core.utils.LocaleUtils
 import com.health.openscale.ui.theme.goalPathLime
+import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.compose.cartesian.axis.Axis
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
+import com.patrykandpatrick.vico.compose.cartesian.data.LineCartesianLayerModel
 import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
 import com.patrykandpatrick.vico.compose.cartesian.decoration.HorizontalLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
@@ -48,6 +54,7 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLa
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerVisibilityListener
 import com.patrykandpatrick.vico.compose.cartesian.marker.DefaultCartesianMarker
+import com.patrykandpatrick.vico.compose.cartesian.marker.LineCartesianLayerMarkerTarget
 import com.patrykandpatrick.vico.compose.cartesian.marker.rememberDefaultCartesianMarker
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.Insets
@@ -59,6 +66,7 @@ import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import com.patrykandpatrick.vico.compose.common.data.ExtraStore
 import java.time.LocalDate
+import java.util.Locale
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.ceil
@@ -186,30 +194,69 @@ internal fun rememberChartLayers(
                 else                   -> false
             }
 
+            val lineProvider = LineCartesianLayer.LineProvider.series(
+                colors.map { color ->
+                    createLineSpec(
+                        color          = color,
+                        role           = group.role,
+                        statisticsMode = targetMeasurementTypeId != null,
+                        showPoints     = showPoints,
+                    )
+                }
+            )
+            val verticalAxisPosition = if (group.onRightAxis) {
+                Axis.Position.Vertical.End
+            } else {
+                Axis.Position.Vertical.Start
+            }
+
             layers.add(
-                rememberLineCartesianLayer(
-                    lineProvider = LineCartesianLayer.LineProvider.series(
-                        colors.map { color ->
-                            createLineSpec(
-                                color          = color,
-                                role           = group.role,
-                                statisticsMode = targetMeasurementTypeId != null,
-                                showPoints     = showPoints,
-                            )
-                        }
-                    ),
-                    verticalAxisPosition = if (group.onRightAxis) {
-                        Axis.Position.Vertical.End
-                    } else {
-                        Axis.Position.Vertical.Start
-                    },
-                    rangeProvider = rangeProvider
-                )
+                if (group.role == ChartSeriesRole.GOAL_PATH) {
+                    remember(lineProvider, verticalAxisPosition, rangeProvider) {
+                        UnmarkedLineCartesianLayer(lineProvider, rangeProvider, verticalAxisPosition)
+                    }
+                } else {
+                    rememberLineCartesianLayer(
+                        lineProvider         = lineProvider,
+                        verticalAxisPosition = verticalAxisPosition,
+                        rangeProvider        = rangeProvider,
+                    )
+                }
             )
         }
     }
 
     return layers
+}
+
+/**
+ * A line layer the marker ignores: its points add no indicator, no label value and no selectable
+ * x position. Used for the goal path, which is a reference rather than a measurement.
+ */
+private class UnmarkedLineCartesianLayer(
+    lineProvider: LineCartesianLayer.LineProvider,
+    rangeProvider: CartesianLayerRangeProvider,
+    verticalAxisPosition: Axis.Position.Vertical,
+) : LineCartesianLayer(
+    lineProvider         = lineProvider,
+    rangeProvider        = rangeProvider,
+    verticalAxisPosition = verticalAxisPosition,
+) {
+    override fun CartesianDrawingContext.updateMarkerTargets(
+        entry: LineCartesianLayerModel.Entry,
+        seriesKey: Any,
+        canvasX: Float,
+        canvasY: Float,
+        lineFillBitmap: ImageBitmap,
+    ) = Unit
+
+    override fun CartesianDrawingContext.updateMarkerTargets(
+        entry: LineCartesianLayerModel.Entry,
+        seriesKey: Any,
+        canvasX: Float,
+        canvasY: Float,
+        color: Color,
+    ) = Unit
 }
 
 /**
@@ -298,6 +345,23 @@ internal fun rememberGoalLine(goal: UserGoals, type: MeasurementType?): Horizont
 }
 
 /**
+ * Marker label with each line value rounded to one decimal in the user's locale. Vico's default
+ * truncates instead, so a stored 149.7f (149.6999…) would read as 149.69.
+ */
+private val RoundedMarkerValueFormatter = DefaultCartesianMarker.ValueFormatter { _, targets ->
+    buildAnnotatedString {
+        targets.filterIsInstance<LineCartesianLayerMarkerTarget>()
+            .flatMap { it.points }
+            .forEachIndexed { index, point ->
+                if (index > 0) append(", ")
+                withStyle(SpanStyle(color = point.color)) {
+                    append(LocaleUtils.formatNumber(point.entry.y, maxFraction = 1, Locale.getDefault()))
+                }
+            }
+    }
+}
+
+/**
  * Remembers and configures a [CartesianMarker] for chart interaction.
  *
  * @param valueFormatter The formatter for the value in the marker label.
@@ -305,7 +369,7 @@ internal fun rememberGoalLine(goal: UserGoals, type: MeasurementType?): Horizont
  */
 @Composable
 fun rememberMarker(
-    valueFormatter: DefaultCartesianMarker.ValueFormatter = DefaultCartesianMarker.ValueFormatter.default(),
+    valueFormatter: DefaultCartesianMarker.ValueFormatter = RoundedMarkerValueFormatter,
     showIndicator: Boolean = true,
 ): CartesianMarker {
     val labelBackground = rememberShapeComponent(
