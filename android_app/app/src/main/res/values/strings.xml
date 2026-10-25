@@ -1005,5 +1005,8 @@
     <string name="summary_walking_hours_minutes">%1$d h %2$d min</string>
     <string name="summary_walking_minutes">%1$d min</string>
     <string name="summary_walking_km">%1$s km</string>
-    <string name="health_connect_rationale">maniFit only reads your walking sessions (distance, duration and calories) from Health Connect to show your two-week totals in the summary shown after saving a measurement. The data stays on this device and is never shared or stored by maniFit.</string>
+    <string name="health_connect_rationale">maniFit only reads your walking sessions (distance, duration and calories) from Health Connect to show their totals on the overview and in the summary shown after saving a measurement. The data stays on this device and is never shared or stored by maniFit.</string>
+    <string name="overview_walking_title">Exercise</string>
+    <string name="overview_walking_last_days">Last %1$d days</string>
+    <string name="overview_walking_daily_average">%1$s · %2$s per day</string>
 </resources>

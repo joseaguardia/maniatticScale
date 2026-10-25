@@ -57,12 +57,15 @@ private val BMI_COLOR_STOPS = arrayOf(
     1f to Color(0xFF8E1B1B),
 )
 
+private val START_MARKER_COLOR = Color(0xFFCCCCCC)
+
 /**
  * Gradient bar for the BMI range 24-45 with an arrow and the value above it. Values outside the
  * range pin the arrow to the nearest end while the label still shows the real number.
+ * [startBmi], when set, adds a light grey arrow at the BMI of the challenge start.
  */
 @Composable
-fun BmiBar(bmi: Float, modifier: Modifier = Modifier) {
+fun BmiBar(bmi: Float, modifier: Modifier = Modifier, startBmi: Float? = null) {
     val textMeasurer = rememberTextMeasurer()
     val label = stringResource(R.string.measurement_type_bmi)
     val valueText = remember(bmi) { "%.1f".format(bmi) }
@@ -102,13 +105,15 @@ fun BmiBar(bmi: Float, modifier: Modifier = Modifier) {
             drawText(tickLayout, topLeft = Offset(x - tickLayout.size.width / 2f, barBottom + tickLength))
         }
 
-        val arrow = Path().apply {
-            moveTo(arrowX - arrowHalfWidth, barTop - arrowHeight - 1.dp.toPx())
-            lineTo(arrowX + arrowHalfWidth, barTop - arrowHeight - 1.dp.toPx())
-            lineTo(arrowX, barTop - 1.dp.toPx())
+        fun arrowAt(x: Float) = Path().apply {
+            moveTo(x - arrowHalfWidth, barTop - arrowHeight - 1.dp.toPx())
+            lineTo(x + arrowHalfWidth, barTop - arrowHeight - 1.dp.toPx())
+            lineTo(x, barTop - 1.dp.toPx())
             close()
         }
-        drawPath(arrow, onSurface)
+        // Drawn first so the current arrow stays on top when both overlap.
+        startBmi?.let { drawPath(arrowAt(inset + bmiFraction(it) * (size.width - 2 * inset)), START_MARKER_COLOR) }
+        drawPath(arrowAt(arrowX), onSurface)
 
         val textX = (arrowX - valueLayout.size.width / 2f).coerceIn(0f, size.width - valueLayout.size.width)
         drawText(valueLayout, topLeft = Offset(textX, 0f))

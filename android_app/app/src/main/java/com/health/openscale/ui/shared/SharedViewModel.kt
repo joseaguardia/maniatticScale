@@ -75,6 +75,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlin.math.abs
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -772,6 +773,23 @@ class SharedViewModel @Inject constructor(
         observeSetting(SettingsPreferenceKeys.SUMMARY_REFERENCE_EPOCH_DAY, -1L)
             .map { day -> if (day >= 0) LocalDate.ofEpochDay(day) else null }
 
+    /** BMI of the reading nearest to the reference date (the challenge start); null while unset. */
+    val referenceBmi: StateFlow<Float?> =
+        combine(selectedUserId, summaryReferenceDate) { uid, date -> uid to date }
+            .flatMapLatest { (uid, date) ->
+                if (uid == null || date == null) flowOf(null)
+                else {
+                    val anchorMillis = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                    measurementFacade.getMeasurementsForUser(uid).map { list ->
+                        list.mapNotNull { mwv ->
+                            mwv.values.firstOrNull { it.type.key == MeasurementType.BMI }?.value?.floatValue
+                                ?.let { bmi -> mwv.measurement.timestamp to bmi }
+                        }.minByOrNull { (timestamp, _) -> abs(timestamp - anchorMillis) }?.second
+                    }
+                }
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     suspend fun setSummaryReferenceDate(date: LocalDate?) {
         saveSetting(SettingsPreferenceKeys.SUMMARY_REFERENCE_EPOCH_DAY, date?.toEpochDay() ?: -1L)
     }
@@ -799,12 +817,20 @@ class SharedViewModel @Inject constructor(
     /** `null` until the first read finishes. */
     val walkingSummary: StateFlow<WalkingSummaryState?> = _walkingSummary.asStateFlow()
 
+    private val _overviewWalking = MutableStateFlow<WalkingSummaryState?>(null)
+    /** Walking totals of [HealthConnectUseCases.OVERVIEW_PERIODS] for the overview; `null` until loaded. */
+    val overviewWalking: StateFlow<WalkingSummaryState?> = _overviewWalking.asStateFlow()
+
     /** Re-reads the summary. A failed read keeps the last loaded summary on screen. */
-    fun refreshWalkingSummary() {
+    fun refreshWalkingSummary() = refreshWalking(_walkingSummary, listOf(HealthConnectUseCases.SUMMARY_DAYS))
+
+    fun refreshOverviewWalking() = refreshWalking(_overviewWalking, HealthConnectUseCases.OVERVIEW_PERIODS)
+
+    private fun refreshWalking(target: MutableStateFlow<WalkingSummaryState?>, periods: List<Int>) {
         viewModelScope.launch {
-            val result = healthConnect.walkingSummary()
-            val previous = _walkingSummary.value
-            _walkingSummary.value =
+            val result = healthConnect.walkingSummary(periods)
+            val previous = target.value
+            target.value =
                 if (result is WalkingSummaryState.Error && previous is WalkingSummaryState.Loaded) previous
                 else result
         }

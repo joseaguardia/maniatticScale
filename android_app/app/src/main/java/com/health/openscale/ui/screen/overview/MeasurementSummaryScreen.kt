@@ -75,6 +75,8 @@ import com.health.openscale.core.model.WalkingSummaryState
 import com.health.openscale.core.service.ChangeComparison
 import com.health.openscale.core.service.MeasurementChange
 import com.health.openscale.core.utils.LocaleUtils
+import com.health.openscale.ui.screen.components.walkingDistanceText
+import com.health.openscale.ui.screen.components.walkingDurationText
 import com.health.openscale.ui.components.RoundMeasurementIcon
 import com.health.openscale.ui.navigation.Routes
 import com.health.openscale.ui.shared.SharedViewModel
@@ -203,15 +205,8 @@ private fun WalkingTotalsCard(sharedViewModel: SharedViewModel) {
 
             is WalkingSummaryState.Loaded -> {
                 val summary = current.summary
-                val hours = summary.totalDurationMinutes / 60
-                val minutes = summary.totalDurationMinutes % 60
-                val timeText =
-                    if (hours > 0) stringResource(R.string.summary_walking_hours_minutes, hours.toInt(), minutes.toInt())
-                    else stringResource(R.string.summary_walking_minutes, minutes.toInt())
-                val distanceText = stringResource(
-                    R.string.summary_walking_km,
-                    "%.1f".format(summary.totalDistanceMeters / 1000.0),
-                )
+                val timeText = walkingDurationText(summary.totalDurationMinutes)
+                val distanceText = walkingDistanceText(summary.totalDistanceMeters)
 
                 Row(
                     modifier = Modifier.height(IntrinsicSize.Min),

@@ -52,7 +52,8 @@ class HealthConnectUseCases @Inject constructor(
         HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
     )
 
-    suspend fun walkingSummary(days: Int = SUMMARY_DAYS): WalkingSummaryState {
+    /** Walking totals of each period in [periods] (in days, today included), from a single read. */
+    suspend fun walkingSummary(periods: List<Int> = listOf(SUMMARY_DAYS)): WalkingSummaryState {
         if (HealthConnectClient.getSdkStatus(application) != HealthConnectClient.SDK_AVAILABLE) {
             return WalkingSummaryState.Unavailable
         }
@@ -64,32 +65,24 @@ class HealthConnectUseCases @Inject constructor(
 
             // Today plus the previous days - 1, starting at local midnight.
             val zone = ZoneId.systemDefault()
-            val start = LocalDate.now(zone).minusDays(days - 1L).atStartOfDay(zone).toInstant()
-            val walks = readWalkingSessions(client, start, Instant.now())
+            val today = LocalDate.now(zone)
+            fun periodStart(days: Int): Instant = today.minusDays(days - 1L).atStartOfDay(zone).toInstant()
 
-            var distance = 0.0
-            var kcal = 0.0
-            var minutes = 0L
-            walks.forEach { session ->
-                val totals = client.aggregate(
-                    AggregateRequest(
-                        metrics = setOf(
-                            DistanceRecord.DISTANCE_TOTAL,
-                            ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL,
-                            TotalCaloriesBurnedRecord.ENERGY_TOTAL,
-                        ),
-                        timeRangeFilter = TimeRangeFilter.between(session.startTime, session.endTime),
-                    )
+            val walks = readWalkingSessions(client, periodStart(periods.max()), Instant.now())
+                .map { session -> sessionTotals(client, session) }
+
+            val summaries = periods.map { days ->
+                val start = periodStart(days)
+                val inPeriod = walks.filter { !it.start.isBefore(start) }
+                WalkingSummary(
+                    days = days,
+                    walkCount = inPeriod.size,
+                    totalDistanceMeters = inPeriod.sumOf { it.distanceMeters },
+                    totalDurationMinutes = inPeriod.sumOf { it.minutes },
+                    totalKilocalories = inPeriod.sumOf { it.kilocalories },
                 )
-                distance += totals[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0
-                // Prefer active calories; fall back to total ones when the source only writes those.
-                val active = totals[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories ?: 0.0
-                kcal += if (active > 0.0) active
-                else totals[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0
-                minutes += Duration.between(session.startTime, session.endTime).toMinutes()
             }
-
-            WalkingSummaryState.Loaded(WalkingSummary(days, walks.size, distance, minutes, kcal))
+            WalkingSummaryState.Loaded(summaries)
         } catch (e: SecurityException) {
             WalkingSummaryState.PermissionRequired
         } catch (e: Exception) {
@@ -98,7 +91,36 @@ class HealthConnectUseCases @Inject constructor(
         }
     }
 
-    // A single page is enough for a couple of weeks of sessions. Paging is avoided on purpose: the
+    private suspend fun sessionTotals(client: HealthConnectClient, session: ExerciseSessionRecord): SessionTotals {
+        val totals = client.aggregate(
+            AggregateRequest(
+                metrics = setOf(
+                    DistanceRecord.DISTANCE_TOTAL,
+                    ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL,
+                    TotalCaloriesBurnedRecord.ENERGY_TOTAL,
+                ),
+                timeRangeFilter = TimeRangeFilter.between(session.startTime, session.endTime),
+            )
+        )
+        // Prefer active calories; fall back to total ones when the source only writes those.
+        val active = totals[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories ?: 0.0
+        return SessionTotals(
+            start = session.startTime,
+            distanceMeters = totals[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0,
+            minutes = Duration.between(session.startTime, session.endTime).toMinutes(),
+            kilocalories = if (active > 0.0) active
+            else totals[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0,
+        )
+    }
+
+    private data class SessionTotals(
+        val start: Instant,
+        val distanceMeters: Double,
+        val minutes: Long,
+        val kilocalories: Double,
+    )
+
+    // A single page is enough for a month of sessions. Paging is avoided on purpose: the
     // Android 13 provider can hand back a non-null token on the last page, which loops until the
     // read quota is exhausted.
     private suspend fun readWalkingSessions(
@@ -117,6 +139,7 @@ class HealthConnectUseCases @Inject constructor(
     companion object {
         private const val TAG = "HealthConnectUseCases"
         const val SUMMARY_DAYS = 14
+        val OVERVIEW_PERIODS = listOf(7, 30)
         private const val MAX_SESSIONS = 1000
     }
 }

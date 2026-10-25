@@ -26,11 +26,14 @@ data class WalkingSummary(
     val totalKilocalories: Double,
 )
 
-/** What the post-save summary can show about walking activity. */
+/** What the post-save summary and the overview can show about walking activity. */
 sealed interface WalkingSummaryState {
     /** Health Connect is not installed or not supported on this device. */
     data object Unavailable : WalkingSummaryState
     data object PermissionRequired : WalkingSummaryState
     data object Error : WalkingSummaryState
-    data class Loaded(val summary: WalkingSummary) : WalkingSummaryState
+    /** One summary per requested period, in the same order. */
+    data class Loaded(val summaries: List<WalkingSummary>) : WalkingSummaryState {
+        val summary: WalkingSummary get() = summaries.first()
+    }
 }

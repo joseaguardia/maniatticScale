@@ -126,6 +126,7 @@ import com.health.openscale.ui.screen.components.BmiBar
 import com.health.openscale.ui.screen.components.CurrentWeightBubble
 import com.health.openscale.ui.screen.components.MeasurementChart
 import com.health.openscale.ui.screen.components.UserGoalChip
+import com.health.openscale.ui.screen.components.WalkingPeriodsCard
 import com.health.openscale.ui.screen.components.provideFilterTopBarAction
 import com.health.openscale.ui.screen.components.rememberAddMeasurementActionButton
 import com.health.openscale.ui.screen.components.rememberBluetoothActionButton
@@ -226,6 +227,7 @@ fun OverviewScreen(
     val latestBmi: Float? = remember(lastMeasurement) {
         lastMeasurement?.values?.firstOrNull { it.type.key == MeasurementType.BMI }?.value?.floatValue
     }
+    val referenceBmi          by sharedViewModel.referenceBmi.collectAsStateWithLifecycle()
     val latestWeightValue = remember(lastMeasurement) {
         lastMeasurement?.values?.firstOrNull { it.type.key == MeasurementType.WEIGHT }
             ?.takeIf { it.value.floatValue != null }
@@ -350,6 +352,7 @@ fun OverviewScreen(
                 if (!isDrillDown && latestBmi != null) {
                     BmiBar(
                         bmi      = latestBmi,
+                        startBmi = referenceBmi,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
                 }
@@ -603,6 +606,11 @@ fun OverviewScreen(
                                         }
                                     }
                                 }
+
+                                WalkingPeriodsCard(
+                                    sharedViewModel = sharedViewModel,
+                                    modifier        = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
+                                )
                             } // end !isDrillDown chart+goals block
 
                             // ── Main list (drill-down only) ───────────────────────────
