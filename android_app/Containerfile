@@ -1,0 +1,35 @@
+# Build environment for the Android app: JDK 21 + Android SDK (cmdline-tools, platform 37, build-tools 37.0.0).
+# Keep the SDK versions in sync with compileSdk/targetSdk in app/build.gradle.kts.
+# The repo is mounted at /workspace at run time; see build.sh.
+FROM docker.io/library/eclipse-temurin:21-jdk
+
+ARG CMDLINE_TOOLS_VERSION=11076708
+ARG ANDROID_PLATFORM=android-37.0
+ARG ANDROID_BUILD_TOOLS=37.0.0
+
+ENV ANDROID_SDK_ROOT=/opt/android-sdk
+ENV ANDROID_HOME=${ANDROID_SDK_ROOT}
+ENV PATH=${PATH}:${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin:${ANDROID_SDK_ROOT}/platform-tools
+
+RUN apt-get update && \
+    apt-get install --yes --no-install-recommends \
+        curl \
+        unzip \
+        git \
+        && rm --recursive --force /var/lib/apt/lists/*
+
+RUN curl --fail --location --output /tmp/cmdline-tools.zip \
+        "https://dl.google.com/android/repository/commandlinetools-linux-${CMDLINE_TOOLS_VERSION}_latest.zip" && \
+    mkdir --parents "${ANDROID_SDK_ROOT}/cmdline-tools" && \
+    unzip -q /tmp/cmdline-tools.zip -d "${ANDROID_SDK_ROOT}/cmdline-tools" && \
+    mv "${ANDROID_SDK_ROOT}/cmdline-tools/cmdline-tools" "${ANDROID_SDK_ROOT}/cmdline-tools/latest" && \
+    rm /tmp/cmdline-tools.zip
+
+RUN yes | sdkmanager --licenses > /dev/null && \
+    sdkmanager --install \
+        "platform-tools" \
+        "platforms;${ANDROID_PLATFORM}" \
+        "build-tools;${ANDROID_BUILD_TOOLS}" \
+        > /dev/null
+
+WORKDIR /workspace

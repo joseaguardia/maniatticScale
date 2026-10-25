@@ -16,6 +16,32 @@ Fork personal de [openScale](https://github.com/oliexdev/openScale) adaptado a m
 - **Línea de objetivo en la gráfica:** trayectoria del objetivo en verde lima, fina y discontinua, recortada al rango de tiempo visible y activada por defecto.
 - **Filtro de tiempo "Objetivo":** muestra la gráfica desde la fecha de referencia hasta hoy.
 
+## Compilar
+
+Se compila dentro de un contenedor podman, así que el host no necesita JDK ni Android SDK (pensado para Fedora Kinoite). Solo hace falta `podman`.
+
+```bash
+cd android_app && ./build.sh
+```
+
+- La primera vez construye la imagen `openscale-android-build` a partir de [`android_app/Containerfile`](android_app/Containerfile) (JDK 21 + Android SDK 37). Para reconstruirla: `REBUILD_IMAGE=1 ./build.sh`.
+- Sin argumentos ejecuta `assembleDebug`; se le puede pasar cualquier tarea de Gradle, por ejemplo `./build.sh testDebugUnitTest`.
+- El APK queda en `android_app/app/build/outputs/apk/debug/maniFit-debug.apk`.
+- La caché de Gradle se guarda en el volumen `openscale-gradle`, para no descargarlo todo en cada build.
+- Si se sube `compileSdk`/`targetSdk` en `app/build.gradle.kts`, hay que actualizar también `ANDROID_PLATFORM` y `ANDROID_BUILD_TOOLS` en el `Containerfile`.
+
+### Clave de firma (importante)
+
+El APK debug se firma con `~/.android/debug.keystore`, que el script monta en el contenedor. **No está en el repo: guarda una copia aparte.** Si en otro ordenador se compila con una clave distinta, Android no deja instalar el APK encima del actual y habría que desinstalar la app, **perdiendo los datos** (salvo que antes se haga una copia de seguridad desde la propia app).
+
+Para comprobar que la clave es la buena (contraseña `android`):
+
+```bash
+podman run --rm --volume ~/.android:/k:ro,Z openscale-android-build keytool -list -keystore /k/debug.keystore -storepass android
+```
+
+Huella SHA-256 esperada: `12:2C:00:7A:84:EF:E8:86:5E:23:29:F8:BA:00:62:75:18:50:7D:CC:5F:AE:59:7D:5F:2D:FF:3D:A7:E5:72:32`
+
 ---
 
 &nbsp; <img src="https://github.com/oliexdev/openScale/blob/master/fastlane/metadata/android/en-GB/images/icon.png" alt="openScale logo" height="60"/> &nbsp;openScale [![CI](https://github.com/oliexdev/openScale/actions/workflows/ci_master.yml/badge.svg)](https://github.com/oliexdev/openScale/actions/workflows/ci_master.yml)
